@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Streeterville Apartments · Near Feinberg</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div>
+      <h1>Streeterville Apartments</h1>
+      <p class="subtitle">Walking distance to Feinberg School of Medicine · 303 E Chicago Ave</p>
+    </div>
+    <div class="meta">
+      <span id="meta-stats"></span>
+      <span class="muted">Scraped 2026-05-11 from each property's official site</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <aside id="filters">
+    <h2>Filters</h2>
+
+    <div class="filter">
+      <label>Bedrooms</label>
+      <div id="beds-filter" class="chips"></div>
+    </div>
+
+    <div class="filter">
+      <label>Max Rent (monthly)</label>
+      <input type="range" id="rent-max" min="2000" max="9000" step="100" value="9000" />
+      <div class="range-display">$<span id="rent-max-display">9,000</span></div>
+    </div>
+
+    <div class="filter">
+      <label>Max Walk Time (min)</label>
+      <input type="range" id="walk-max" min="5" max="20" step="1" value="20" />
+      <div class="range-display"><span id="walk-max-display">20</span> min</div>
+    </div>
+
+    <div class="filter">
+      <label class="checkbox">
+        <input type="checkbox" id="now-only" />
+        <span>Only "Available Now"</span>
+      </label>
+    </div>
+
+    <div class="filter">
+      <label class="checkbox">
+        <input type="checkbox" id="hide-skipped" checked />
+        <span>Hide buildings without scraped data</span>
+      </label>
+    </div>
+
+    <div class="filter">
+      <label>Sort by</label>
+      <select id="sort">
+        <option value="rent">Rent (low → high)</option>
+        <option value="walk">Walk time (near → far)</option>
+        <option value="sqft">Square feet (large → small)</option>
+        <option value="avail">Available date (soonest)</option>
+      </select>
+    </div>
+
+    <button id="reset" class="btn-reset">Reset filters</button>
+
+    <div class="legend">
+      <div class="legend-item"><span class="dot dot-now"></span>Available Now</div>
+      <div class="legend-item"><span class="dot dot-soon"></span>Upcoming</div>
+      <div class="legend-item"><span class="dot dot-skipped"></span>Not scraped</div>
+      <div class="legend-item"><span class="rect-sample"></span>Rectangle bounds</div>
+    </div>
+  </aside>
+
+  <section id="map-pane">
+    <div id="map"></div>
+  </section>
+
+  <section id="table-pane">
+    <div class="table-header">
+      <span id="result-count"></span>
+      <div class="view-toggle">
+        <button class="view-btn active" data-view="units">Units</button>
+        <button class="view-btn" data-view="buildings">Buildings</button>
+        <button class="view-btn" data-view="manual" id="manual-view-btn" hidden>Manual check</button>
+      </div>
+    </div>
+
+    <div id="units-view" class="results">
+      <table id="units-table">
+        <thead>
+          <tr>
+            <th>Building</th>
+            <th>Unit / Plan</th>
+            <th>Beds</th>
+            <th>SqFt</th>
+            <th>Rent</th>
+            <th>Available</th>
+            <th>Walk</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div id="buildings-view" class="results hidden">
+      <div id="buildings-cards"></div>
+    </div>
+
+    <div id="manual-view" class="results hidden">
+      <div class="manual-intro" id="manual-intro">
+        These buildings use widget-based listings that block automated scraping. Click through to check availability manually.
+      </div>
+      <div id="manual-cards"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div>
+    Data scraped directly from each property's official website. Apartments.com/Zillow not used (snapshot is often stale).
+    See <a href="https://github.com/2025Sky/streeterville-apartments">source on GitHub</a>.
+  </div>
+  <div class="muted">
+    Rectangle: 41.889096–41.899339 lat × −87.636100 to −87.613490 lng.
+    Excluded: condo-only buildings, &gt;20 min walk.
+  </div>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

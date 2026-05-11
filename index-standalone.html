@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Streeterville Apartments · Near Feinberg</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+* { box-sizing: border-box; }
+:root {
+  --bg: #fafaf9;
+  --card: #ffffff;
+  --border: #e5e5e3;
+  --text: #1a1a1a;
+  --text-muted: #6b6b6b;
+  --accent: #2563eb;
+  --accent-light: #dbeafe;
+  --now: #16a34a;
+  --now-light: #dcfce7;
+  --soon: #f59e0b;
+  --skipped: #9ca3af;
+  --rect: #2563eb;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+header {
+  background: white;
+  border-bottom: 1px solid var(--border);
+  padding: 16px 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+h1 { margin: 0; font-size: 20px; font-weight: 600; }
+.subtitle { margin: 4px 0 0; font-size: 13px; color: var(--text-muted); }
+.meta { display: flex; flex-direction: column; align-items: flex-end; font-size: 12px; gap: 2px; }
+.muted { color: var(--text-muted); }
+
+main {
+  display: grid;
+  grid-template-columns: 260px 1fr 1fr;
+  grid-template-rows: calc(100vh - 130px);
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+#filters {
+  background: white;
+  border-right: 1px solid var(--border);
+  padding: 20px 18px;
+  overflow-y: auto;
+}
+#filters h2 { margin: 0 0 16px; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+.filter { margin-bottom: 20px; }
+.filter label { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
+.filter label.checkbox { display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text); }
+.filter label.checkbox input { cursor: pointer; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: white;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.1s;
+}
+.chip:hover { border-color: var(--accent); }
+.chip.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+input[type="range"] { width: 100%; }
+.range-display { font-size: 12px; color: var(--text); margin-top: 4px; font-weight: 500; }
+
+select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 13px;
+  background: white;
+}
+
+.btn-reset {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+.btn-reset:hover { background: var(--bg); }
+
+.legend { border-top: 1px solid var(--border); padding-top: 14px; font-size: 12px; }
+.legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.dot {
+  width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0;
+}
+.dot-now { background: var(--now); }
+.dot-soon { background: var(--soon); }
+.dot-skipped { background: var(--skipped); }
+.rect-sample { width: 16px; height: 10px; border: 2px solid var(--rect); background: rgba(37, 99, 235, 0.1); display: inline-block; flex-shrink: 0; }
+
+#map-pane { border-right: 1px solid var(--border); }
+#map { width: 100%; height: 100%; }
+
+#table-pane { display: flex; flex-direction: column; background: white; }
+.table-header {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+#result-count { color: var(--text-muted); font-weight: 500; }
+.view-toggle { display: flex; gap: 4px; }
+.view-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  background: white;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.view-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+.results { overflow-y: auto; flex: 1; }
+.hidden { display: none; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead { position: sticky; top: 0; background: white; z-index: 1; }
+th { text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--border); color: var(--text-muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--bg); }
+tbody tr.now { background: var(--now-light); }
+tbody tr.now:hover { background: #b9eccc; }
+tbody tr.highlighted { background: var(--accent-light); }
+
+.building-name { font-weight: 500; font-size: 12px; }
+.rent { font-weight: 600; }
+.avail-now { color: var(--now); font-weight: 600; }
+.avail-future { color: var(--text-muted); font-size: 12px; }
+.link-btn { color: var(--accent); text-decoration: none; font-size: 12px; }
+.link-btn:hover { text-decoration: underline; }
+
+#buildings-cards { padding: 12px; display: grid; gap: 10px; }
+.card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: white;
+  cursor: pointer;
+}
+.card:hover { border-color: var(--accent); }
+.card.skipped { background: #fafafa; opacity: 0.7; }
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 6px; }
+.card-name { font-weight: 600; font-size: 14px; }
+.card-address { font-size: 12px; color: var(--text-muted); }
+.card-rating { font-size: 12px; }
+.star { color: #f59e0b; }
+.card-stats { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; margin-top: 6px; }
+.stat-label { color: var(--text-muted); }
+.card-notes { font-size: 11px; color: var(--text-muted); margin-top: 6px; font-style: italic; }
+
+.leaflet-popup-content { margin: 10px 12px; font-size: 13px; }
+.popup-name { font-weight: 600; margin-bottom: 4px; }
+.popup-addr { color: var(--text-muted); font-size: 12px; margin-bottom: 6px; }
+.popup-stats { font-size: 12px; }
+.popup-link { color: var(--accent); font-size: 12px; text-decoration: none; display: block; margin-top: 6px; }
+.popup-link:hover { text-decoration: underline; }
+
+footer {
+  border-top: 1px solid var(--border);
+  background: white;
+  padding: 10px 24px;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+footer a { color: var(--accent); }
+
+@media (max-width: 900px) {
+  main { grid-template-columns: 1fr; grid-template-rows: auto 50vh 1fr; }
+  #filters { border-right: none; border-bottom: 1px solid var(--border); }
+  #map-pane { border-right: none; }
+}
+
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div>
+      <h1>Streeterville Apartments</h1>
+      <p class="subtitle">Walking distance to Feinberg School of Medicine · 303 E Chicago Ave</p>
+    </div>
+    <div class="meta">
+      <span id="meta-stats"></span>
+      <span class="muted">Scraped 2026-05-11 from each property's official site</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <aside id="filters">
+    <h2>Filters</h2>
+
+    <div class="filter">
+      <label>Bedrooms</label>
+      <div id="beds-filter" class="chips"></div>
+    </div>
+
+    <div class="filter">
+      <label>Max Rent (monthly)</label>
+      <input type="range" id="rent-max" min="2000" max="9000" step="100" value="9000" />
+      <div class="range-display">$<span id="rent-max-display">9,000</span></div>
+    </div>
+
+    <div class="filter">
+      <label>Max Walk Time (min)</label>
+      <input type="range" id="walk-max" min="5" max="20" step="1" value="20" />
+      <div class="range-display"><span id="walk-max-display">20</span> min</div>
+    </div>
+
+    <div class="filter">
+      <label class="checkbox">
+        <input type="checkbox" id="now-only" />
+        <span>Only "Available Now"</span>
+      </label>
+    </div>
+
+    <div class="filter">
+      <label class="checkbox">
+        <input type="checkbox" id="hide-skipped" checked />
+        <span>Hide buildings without scraped data</span>
+      </label>
+    </div>
+
+    <div class="filter">
+      <label>Sort by</label>
+      <select id="sort">
+        <option value="rent">Rent (low → high)</option>
+        <option value="walk">Walk time (near → far)</option>
+        <option value="sqft">Square feet (large → small)</option>
+        <option value="avail">Available date (soonest)</option>
+      </select>
+    </div>
+
+    <button id="reset" class="btn-reset">Reset filters</button>
+
+    <div class="legend">
+      <div class="legend-item"><span class="dot dot-now"></span>Available Now</div>
+      <div class="legend-item"><span class="dot dot-soon"></span>Upcoming</div>
+      <div class="legend-item"><span class="dot dot-skipped"></span>Not scraped</div>
+      <div class="legend-item"><span class="rect-sample"></span>Rectangle bounds</div>
+    </div>
+  </aside>
+
+  <section id="map-pane">
+    <div id="map"></div>
+  </section>
+
+  <section id="table-pane">
+    <div class="table-header">
+      <span id="result-count"></span>
+      <div class="view-toggle">
+        <button class="view-btn active" data-view="units">Units</button>
+        <button class="view-btn" data-view="buildings">Buildings</button>
+      </div>
+    </div>
+
+    <div id="units-view" class="results">
+      <table id="units-table">
+        <thead>
+          <tr>
+            <th>Building</th>
+            <th>Unit / Plan</th>
+            <th>Beds</th>
+            <th>SqFt</th>
+            <th>Rent</th>
+            <th>Available</th>
+            <th>Walk</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div id="buildings-view" class="results hidden">
+      <div id="buildings-cards"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div>
+    Data scraped directly from each property's official website. Apartments.com/Zillow not used (snapshot is often stale).
+    See <a href="https://github.com/USERNAME/streeterville-apartments">source on GitHub</a>.
+  </div>
+  <div class="muted">
+    Rectangle: 41.889096–41.899339 lat × −87.636100 to −87.613490 lng.
+    Excluded: condo-only buildings, &gt;20 min walk.
+  </div>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+window.__APARTMENTS__ = [{"id": 1, "name": "The Bernardin", "address": "747 N Wabash Ave", "lat": 41.8957, "lng": -87.6266, "rating": 4.5, "rating_count": 61, "walk_m": 400, "walk_time": "5-6 min", "url": "https://thebernardin.com", "url_floorplans": "https://thebernardin.com/floorplans/", "year": "2018", "data_format": "plan-level", "scraped": true, "notes": "Willow Bridge 管理"}, {"id": 2, "name": "The Saint Grand", "address": "218 E Grand Ave", "lat": 41.8916, "lng": -87.6256, "rating": 4.5, "rating_count": 51, "walk_m": 540, "walk_time": "7 min", "url": "https://thesaintgrand.com", "url_floorplans": "https://www.luxurychicagoapartments.com/properties/218-e-grand-ave/", "year": "2023", "data_format": "plan-level", "scraped": true, "notes": "Luxury Living 管理"}, {"id": 3, "name": "Optima Signature", "address": "220 E Illinois St", "lat": 41.8908, "lng": -87.6256, "rating": 4.6, "rating_count": 317, "walk_m": 800, "walk_time": "10 min", "url": "https://www.optimasignature.com", "url_floorplans": "https://www.optimasignature.com", "year": "2017", "data_format": "plan-level", "scraped": true, "notes": "外部门户，未抓到"}, {"id": 4, "name": "One Chicago", "address": "14 W Superior St", "lat": 41.8957, "lng": -87.6285, "rating": 4.7, "rating_count": 241, "walk_m": 610, "walk_time": "8 min", "url": "https://liveonechicago.com", "url_floorplans": "https://liveonechicago.com/floor-plans/", "year": "2022", "data_format": "plan-level", "scraped": true, "notes": "与 23 West 同一项目"}, {"id": 5, "name": "23 West Apartments & Lofts", "address": "23 W Chicago Ave", "lat": 41.8965, "lng": -87.6285, "rating": 4.6, "rating_count": 31, "walk_m": 620, "walk_time": "8 min", "url": "https://liveonechicago.com", "url_floorplans": "https://liveonechicago.com/floor-plans/", "year": "2020", "data_format": "plan-level", "scraped": true, "notes": "与 One Chicago 合并显示"}, {"id": 6, "name": "Aston Chicago", "address": "200 E Illinois St", "lat": 41.8908, "lng": -87.6258, "rating": 4.2, "rating_count": 123, "walk_m": 800, "walk_time": "10 min", "url": "https://www.astonchicago.com", "url_floorplans": "https://www.astonchicago.com/Floor-plans.aspx", "year": "2021", "data_format": "plan-level w/ unit count", "scraped": true, "notes": "Greystar；base + ~$500 强制费"}, {"id": 7, "name": "Arrive Streeterville", "address": "333 E Ontario St", "lat": 41.893, "lng": -87.6189, "rating": 4.0, "rating_count": 569, "walk_m": 500, "walk_time": "6-7 min", "url": "https://arrivestreeterville.com", "url_floorplans": "https://arrivestreeterville.com/floor-plans/", "year": "1971 (renovated)", "data_format": "plan-level w/ unit count (87 units total)", "scraped": true, "notes": "⭐ 离 Feinberg 最近；87 个 unit；最便宜 Studio $2,049"}, {"id": 8, "name": "Residences at 8 E Huron", "address": "8 E Huron St", "lat": 41.8946, "lng": -87.6276, "rating": 4.4, "rating_count": 23, "walk_m": 670, "walk_time": "9 min", "url": "https://8easthuron.com", "url_floorplans": "https://8easthuron.com/floor-plans/", "year": "2009", "data_format": "unit-level", "scraped": true, "notes": "无公开 availability 页"}, {"id": 9, "name": "The Streeter", "address": "345 E Ohio St", "lat": 41.8921, "lng": -87.619, "rating": 4.4, "rating_count": 109, "walk_m": 680, "walk_time": "9 min", "url": "https://www.thestreeter.com", "url_floorplans": "https://www.thestreeter.com/floor-plans/", "year": "2009", "data_format": "plan-level", "scraped": true, "notes": "Luxury Living 管理"}, {"id": 10, "name": "State & Chestnut", "address": "845 N State St", "lat": 41.8977, "lng": -87.6279, "rating": 4.9, "rating_count": 100, "walk_m": 950, "walk_time": "12-13 min", "url": "https://stateandchestnut.com", "url_floorplans": "https://www.stateandchestnut.com/apartments", "year": "2014", "data_format": "unit-level", "scraped": true, "notes": "Gigabit 网络+水电网气全包"}, {"id": 11, "name": "Axis Apartments & Lofts", "address": "441 E Erie St", "lat": 41.8941, "lng": -87.6166, "rating": 2.7, "rating_count": 158, "walk_m": 560, "walk_time": "7 min", "url": "https://axis.groupfox.com", "url_floorplans": "https://axis.groupfox.com", "year": "2010", "data_format": "plan-level", "scraped": true, "notes": "1986 老楼，2.7星管理评价差；但价格最低（$1,920 Studio）"}, {"id": 12, "name": "Chestnut Place", "address": "8 W Chestnut St", "lat": 41.8983, "lng": -87.6285, "rating": 4.7, "rating_count": 92, "walk_m": 750, "walk_time": "10 min", "url": "https://chestnutplace.com", "url_floorplans": "https://chestnutplace.com/floorplans/", "year": "1981 (renovated)", "data_format": "plan-level", "scraped": true, "notes": ""}, {"id": 13, "name": "Atwater Apartments", "address": "355 E Ohio St", "lat": 41.8921, "lng": -87.6188, "rating": 4.8, "rating_count": 354, "walk_m": 780, "walk_time": "10 min", "url": "https://liveatwaterchicago.com", "url_floorplans": "https://www.liveatwaterchicago.com/floor-plans/", "year": "2016", "data_format": "unit-level (33 units)", "scraped": true, "notes": "Bozzuto，口碑好；仅 page 1 抓取"}, {"id": 14, "name": "ReNew Waterside", "address": "420 E Ohio St", "lat": 41.8921, "lng": -87.6177, "rating": 4.0, "rating_count": 100, "walk_m": 820, "walk_time": "11 min", "url": "https://www.renewwaterside.com", "url_floorplans": "https://www.renewwaterside.com/floor-plans/", "year": "1965 (renovated)", "data_format": "plan-level", "scraped": true, "notes": "canvas/widget 页"}, {"id": 15, "name": "Moment by Windsor", "address": "545 N McClurg Ct", "lat": 41.8929, "lng": -87.6184, "rating": 4.4, "rating_count": 171, "walk_m": 600, "walk_time": "8 min", "url": "https://www.windsorcommunities.com/properties/moment/", "url_floorplans": "https://www.windsorcommunities.com/properties/moment/floorplans/", "year": "2015", "data_format": "unit-level (21 units)", "scraped": true, "notes": "Windsor；fee 模态框阻塞"}, {"id": 16, "name": "Sienna Chicago", "address": "423 E Ohio St", "lat": 41.8921, "lng": -87.6175, "rating": 4.5, "rating_count": 34, "walk_m": 845, "walk_time": "11 min", "url": "https://www.siennachicago.com", "url_floorplans": "https://www.siennachicago.com/", "year": "2017", "data_format": "plan-level (mostly call)", "scraped": true, "notes": "50 单元精品楼；外部链接"}, {"id": 17, "name": "465 North Park", "address": "465 N Park Dr", "lat": 41.8918, "lng": -87.62, "rating": 4.9, "rating_count": 603, "walk_m": 600, "walk_time": "8 min", "url": "https://www.465northpark.com", "url_floorplans": "https://www.465northpark.com/floor-plans/", "year": "2016", "data_format": "unit-level (17 units)", "scraped": true, "notes": "Bozzuto；仅 6 of 17 抓到"}, {"id": 18, "name": "The Bush Temple", "address": "108 W Chicago Ave", "lat": 41.8935, "lng": -87.6306, "rating": 4.6, "rating_count": 182, "walk_m": 875, "walk_time": "11 min", "url": "https://livethebushtemple.com", "url_floorplans": "https://livethebushtemple.com/floorplans/", "year": "2017 (历史改造)", "data_format": "floor-summary", "scraped": true, "notes": ""}, {"id": 19, "name": "Two West Delaware", "address": "2 W Delaware Pl", "lat": 41.8992, "lng": -87.6313, "rating": 4.6, "rating_count": 109, "walk_m": 915, "walk_time": "12 min", "url": "https://twowestdelaware.com", "url_floorplans": "https://twowestdelaware.com/floorplans/", "year": "2009", "data_format": "floor-summary", "scraped": true, "notes": "整栋只 3 单元可售"}, {"id": 20, "name": "Lake Shore Plaza", "address": "445 E Ohio St", "lat": 41.8906, "lng": -87.6153, "rating": 3.3, "rating_count": 90, "walk_m": 920, "walk_time": "12 min", "url": "https://www.lakeshoreplaza.com", "url_floorplans": "https://www.lakeshoreplaza.com/", "year": "1965", "data_format": "plan-level", "scraped": true, "notes": "~20% 单元可负担住房；最便宜 1BR $2,090"}, {"id": 21, "name": "West77", "address": "77 W Huron St", "lat": 41.892, "lng": -87.63, "rating": 4.6, "rating_count": 149, "walk_m": 945, "walk_time": "12 min", "url": "https://www.west77apts.com", "url_floorplans": "https://www.west77apts.com/floorplans", "year": "2009", "data_format": "1-unit sample", "scraped": true, "notes": "Lincoln Property；1 unit per page"}, {"id": 22, "name": "North Water Apartments", "address": "340 E North Water St", "lat": 41.8877, "lng": -87.6183, "rating": 4.5, "rating_count": 206, "walk_m": 980, "walk_time": "13 min", "url": "https://northwaterapts.com", "url_floorplans": "https://northwaterapts.com/floor-plans/", "year": "2017", "data_format": "plan-level", "scraped": true, "notes": "⚠️ 在矩形南界外 ~150m；widget 页"}, {"id": 23, "name": "One Bennett Park (Rental)", "address": "514 N Peshtigo Ct", "lat": 41.8891, "lng": -87.6158, "rating": 4.4, "rating_count": 57, "walk_m": 985, "walk_time": "13 min", "url": "https://www.onebennettpark.com", "url_floorplans": "https://www.relatedrentals.com/apartment-rentals/chicago/streeterville/one-bennett-park", "year": "2019", "data_format": "featured-only", "scraped": true, "notes": "condo+租赁混合；Related 管理"}, {"id": 24, "name": "State and Grand", "address": "505 N State St", "lat": 41.8891, "lng": -87.6278, "rating": 3.9, "rating_count": 62, "walk_m": 1070, "walk_time": "14 min", "url": "https://stateandgrandapts.com", "url_floorplans": "https://stateandgrandapts.com/floorplans/", "year": "2014", "data_format": "plan-level w/ unit count", "scraped": true, "notes": "Greystar"}, {"id": 25, "name": "Grand Plaza", "address": "540 N State St", "lat": 41.8897, "lng": -87.6278, "rating": 3.7, "rating_count": 59, "walk_m": 1060, "walk_time": "14 min", "url": "https://grandplazachicago.com", "url_floorplans": "https://grandplazachicago.com/floor-plans/", "year": "2003", "data_format": "plan-level", "scraped": true, "notes": "Draper and Kramer"}, {"id": 26, "name": "500 Lake Shore Drive", "address": "500 N Lake Shore Dr", "lat": 41.8891, "lng": -87.6138, "rating": 4.6, "rating_count": 133, "walk_m": 1080, "walk_time": "14 min", "url": "https://www.relatedrentals.com/apartment-rentals/chicago/streeterville/500-lake-shore-drive", "url_floorplans": "https://www.relatedrentals.com/apartment-rentals/chicago/streeterville/500-lake-shore-drive", "year": "2013", "data_format": "featured-only", "scraped": true, "notes": "Related Midwest；东南界临界"}, {"id": 27, "name": "Cityfront Place", "address": "400 N McClurg Ct", "lat": 41.8892, "lng": -87.6181, "rating": 4.6, "rating_count": 220, "walk_m": 800, "walk_time": "10 min", "url": "https://www.cityfrontchicago.com", "url_floorplans": "https://www.cityfrontchicago.com/floorplans/", "year": "1991 (renovated)", "data_format": "plan-level", "scraped": true, "notes": "⚠️ 临南界外 ~11m；交互地图部件"}, {"id": 28, "name": "The Ardus", "address": "676 N La Salle Dr", "lat": 41.8946, "lng": -87.6332, "rating": 4.2, "rating_count": 120, "walk_m": 1135, "walk_time": "15 min", "url": "https://livetheardus.com", "url_floorplans": "https://livetheardus.com/floorplans/", "year": "2014", "data_format": "floor-summary", "scraped": true, "notes": "FLATS 集团子楼"}, {"id": 29, "name": "Marlowe", "address": "169 W Huron St", "lat": 41.892, "lng": -87.631, "rating": 4.6, "rating_count": 38, "walk_m": 1180, "walk_time": "15 min", "url": "https://www.livemarlowe.com", "url_floorplans": "https://www.livemarlowe.com/floorplans", "year": "2017", "data_format": "plan + 3 featured", "scraped": true, "notes": "价格需 click 进单元才显示"}, {"id": 30, "name": "The Gallery on Wells", "address": "637 N Wells St", "lat": 41.8911, "lng": -87.6314, "rating": 3.7, "rating_count": 79, "walk_m": 1280, "walk_time": "16 min", "url": "https://www.rentatthegallery.com", "url_floorplans": "https://www.rentatthegallery.com/sightmap", "year": "2014", "data_format": "unit-level (12 units)", "scraped": true, "notes": "Sightmap 部件"}, {"id": 31, "name": "640 North Wells", "address": "640 N Wells St", "lat": 41.8958, "lng": -87.6279, "rating": 4.4, "rating_count": 112, "walk_m": 1345, "walk_time": "17 min", "url": "https://www.640northwells.com", "url_floorplans": "https://www.windsorcommunities.com/properties/640-north-wells/", "year": "2018", "data_format": "starting-only", "scraped": true, "notes": "Windsor；仅起价"}, {"id": 32, "name": "Flair Tower", "address": "222 W Erie St", "lat": 41.8913, "lng": -87.6318, "rating": 4.3, "rating_count": 52, "walk_m": 1360, "walk_time": "17 min", "url": "https://www.flairtower.com", "url_floorplans": "https://www.flairtower.com/floorplans/", "year": "2009", "data_format": "1-unit sample", "scraped": true, "notes": "LEED Silver；1 per page"}, {"id": 33, "name": "AMLI River North", "address": "71 W Hubbard St", "lat": 41.8901, "lng": -87.6291, "rating": 4.4, "rating_count": 94, "walk_m": 1480, "walk_time": "18-20 min", "url": "https://www.amli.com/apartments/chicago/downtown-chicago-apartments/amli-river-north", "url_floorplans": "https://www.amli.com/apartments/chicago/downtown-chicago-apartments/amli-river-north", "year": "2009", "data_format": "category-only", "scraped": true, "notes": "AMLI；LEED Gold；类别 highlight"}];
+window.__UNITS__ = [{"apt_id": 1, "apt_name": "The Bernardin", "address": "747 N Wabash Ave", "unit": "3 left", "plan": "S1", "beds": "Studio", "baths": 1, "sqft": 546, "rent_low": 2431, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "3 left", "url": "https://thebernardin.com/floorplans/"}, {"apt_id": 1, "apt_name": "The Bernardin", "address": "747 N Wabash Ave", "unit": "1 left", "plan": "A", "beds": "1BR", "baths": 1, "sqft": 760, "rent_low": 3279, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "1 left", "url": "https://thebernardin.com/floorplans/"}, {"apt_id": 1, "apt_name": "The Bernardin", "address": "747 N Wabash Ave", "unit": "1 left", "plan": "B3", "beds": "2BR", "baths": 2, "sqft": 1250, "rent_low": 5281, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "1 left", "url": "https://thebernardin.com/floorplans/"}, {"apt_id": 1, "apt_name": "The Bernardin", "address": "747 N Wabash Ave", "unit": "1 left", "plan": "B4", "beds": "2BR", "baths": 2, "sqft": 1255, "rent_low": 5021, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "1 left", "url": "https://thebernardin.com/floorplans/"}, {"apt_id": 1, "apt_name": "The Bernardin", "address": "747 N Wabash Ave", "unit": "2 left", "plan": "B5", "beds": "2BR", "baths": 2, "sqft": 1261, "rent_low": 4952, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "2 left", "url": "https://thebernardin.com/floorplans/"}, {"apt_id": 1, "apt_name": "The Bernardin", "address": "747 N Wabash Ave", "unit": "1 left", "plan": "B8", "beds": "2BR", "baths": 2, "sqft": 1405, "rent_low": 5365, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "1 left", "url": "https://thebernardin.com/floorplans/"}, {"apt_id": 2, "apt_name": "The Saint Grand", "address": "218 E Grand Ave", "unit": "plan", "plan": "Convertible", "beds": "Studio", "baths": 1, "sqft": null, "rent_low": 2705, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.luxurychicagoapartments.com/properties/218-e-grand-ave/"}, {"apt_id": 2, "apt_name": "The Saint Grand", "address": "218 E Grand Ave", "unit": "plan", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": null, "rent_low": 3180, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.luxurychicagoapartments.com/properties/218-e-grand-ave/"}, {"apt_id": 2, "apt_name": "The Saint Grand", "address": "218 E Grand Ave", "unit": "plan", "plan": "1BR+Den", "beds": "1BR+Den", "baths": 1, "sqft": null, "rent_low": 3555, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.luxurychicagoapartments.com/properties/218-e-grand-ave/"}, {"apt_id": 2, "apt_name": "The Saint Grand", "address": "218 E Grand Ave", "unit": "plan", "plan": "2BR", "beds": "2BR", "baths": 2, "sqft": null, "rent_low": 4510, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.luxurychicagoapartments.com/properties/218-e-grand-ave/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "plan", "plan": "Tower 07", "beds": "Studio", "baths": 1, "sqft": 730, "rent_low": 2987, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "plan", "plan": "Tower 04", "beds": "Studio", "baths": 1, "sqft": 571, "rent_low": 3179, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "plan", "plan": "Tower 03", "beds": "Studio", "baths": 1, "sqft": 571, "rent_low": 3224, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "plan", "plan": "Tower 13", "beds": "Studio", "baths": 1, "sqft": 597, "rent_low": 3224, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "plan", "plan": "Tower 02", "beds": "1BR", "baths": 1, "sqft": 734, "rent_low": 3250, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "plan", "plan": "Tower 05", "beds": "1BR", "baths": 1, "sqft": 734, "rent_low": 3251, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "plan", "plan": "Tower 10", "beds": "1BR", "baths": 1, "sqft": 747, "rent_low": 3777, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "plan", "plan": "Tower 11", "beds": "1BR", "baths": 1, "sqft": 881, "rent_low": 3848, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "plan", "plan": "Tower 09", "beds": "1BR", "baths": 1, "sqft": 881, "rent_low": 3923, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "plan", "plan": "Apex 07", "beds": "1BR", "baths": 1, "sqft": 747, "rent_low": 4027, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "plan", "plan": "Apex 08", "beds": "1BR", "baths": 1, "sqft": 923, "rent_low": 4343, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "plan", "plan": "Apex 06", "beds": "1BR", "baths": 1, "sqft": 923, "rent_low": 4363, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "plan", "plan": "Tower 06", "beds": "2BR", "baths": 2, "sqft": 1230, "rent_low": 5630, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "plan", "plan": "Tower 12", "beds": "2BR", "baths": 2, "sqft": 1250, "rent_low": 5645, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "plan", "plan": "Tower 01", "beds": "2BR", "baths": 2, "sqft": 1245, "rent_low": 5807, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "plan", "plan": "Tower 08", "beds": "2BR", "baths": 2, "sqft": 1316, "rent_low": 6280, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "plan", "plan": "Apex 01", "beds": "3BR", "baths": 2, "sqft": 1613, "rent_low": 8145, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "call", "plan": "Apex 2001", "beds": "1BR", "baths": 1, "sqft": 1130, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "Call to inquire", "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "call", "plan": "Apex 02", "beds": "2BR", "baths": 2, "sqft": 1249, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "Call to inquire", "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "call", "plan": "Apex 03", "beds": "2BR", "baths": 2, "sqft": 1318, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "Call to inquire", "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "call", "plan": "Penthouse 5201", "beds": "3BR", "baths": 3, "sqft": 2352, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "Call to inquire", "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "call", "plan": "Penthouse 5202", "beds": "3BR", "baths": 3, "sqft": 2352, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "Call to inquire", "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "call", "plan": "Apex 05", "beds": "3BR", "baths": 2, "sqft": 1642, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "Call to inquire", "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "call", "plan": "Apex 04", "beds": "3BR", "baths": 2, "sqft": 1626, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "Call to inquire", "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 3, "apt_name": "Optima Signature", "address": "220 E Illinois St", "unit": "call", "plan": "Apex 09", "beds": "3BR", "baths": 2, "sqft": 1511, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "Call to inquire", "url": "https://www.optimasignature.com/floor-plans/"}, {"apt_id": 5, "apt_name": "23 West Apartments & Lofts", "address": "23 W Chicago Ave", "unit": "plan", "plan": "LC2", "beds": "Jr 1BR", "baths": 1, "sqft": 619, "rent_low": 3176, "rent_high": 3197, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://liveonechicago.com/floor-plans/"}, {"apt_id": 5, "apt_name": "23 West Apartments & Lofts", "address": "23 W Chicago Ave", "unit": "plan", "plan": "LA5", "beds": "1BR", "baths": 1, "sqft": 857, "rent_low": 4004, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://liveonechicago.com/floor-plans/"}, {"apt_id": 5, "apt_name": "23 West Apartments & Lofts", "address": "23 W Chicago Ave", "unit": "plan", "plan": "LA12", "beds": "1BR+Den", "baths": 1, "sqft": 890, "rent_low": 4380, "rent_high": 4395, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://liveonechicago.com/floor-plans/"}, {"apt_id": 5, "apt_name": "23 West Apartments & Lofts", "address": "23 W Chicago Ave", "unit": "plan", "plan": "LA3", "beds": "1BR", "baths": 1, "sqft": 957, "rent_low": 4394, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://liveonechicago.com/floor-plans/"}, {"apt_id": 5, "apt_name": "23 West Apartments & Lofts", "address": "23 W Chicago Ave", "unit": "plan", "plan": "WA17", "beds": "1BR", "baths": 1, "sqft": 816, "rent_low": 4512, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://liveonechicago.com/floor-plans/"}, {"apt_id": 4, "apt_name": "One Chicago", "address": "14 W Superior St", "unit": "plan", "plan": "CA5", "beds": "1BR", "baths": 1, "sqft": 873, "rent_low": 5196, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://liveonechicago.com/floor-plans/"}, {"apt_id": 4, "apt_name": "One Chicago", "address": "14 W Superior St", "unit": "plan", "plan": "CA2A", "beds": "1BR", "baths": 1, "sqft": 1069, "rent_low": 5825, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://liveonechicago.com/floor-plans/"}, {"apt_id": 4, "apt_name": "One Chicago", "address": "14 W Superior St", "unit": "plan", "plan": "CB1A", "beds": "2BR", "baths": 2, "sqft": 1653, "rent_low": 7955, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://liveonechicago.com/floor-plans/"}, {"apt_id": 4, "apt_name": "One Chicago", "address": "14 W Superior St", "unit": "plan", "plan": "CB2", "beds": "2BR", "baths": 2, "sqft": 1553, "rent_low": 8227, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://liveonechicago.com/floor-plans/"}, {"apt_id": 4, "apt_name": "One Chicago", "address": "14 W Superior St", "unit": "plan", "plan": "CB4", "beds": "2BR", "baths": 2, "sqft": 1561, "rent_low": 8316, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://liveonechicago.com/floor-plans/"}, {"apt_id": 6, "apt_name": "Aston Chicago", "address": "200 E Illinois St", "unit": "2 units", "plan": "A1", "beds": "1BR", "baths": 1, "sqft": 695, "rent_low": 2681, "rent_high": 2771, "available": null, "available_now": false, "lease_term": "varies", "promotion": "base + ~$500 强制费 = Total Monthly", "url": "https://www.astonchicago.com/Floor-plans.aspx"}, {"apt_id": 6, "apt_name": "Aston Chicago", "address": "200 E Illinois St", "unit": "2 units", "plan": "B1", "beds": "1BR", "baths": 1, "sqft": 773, "rent_low": 3230, "rent_high": 3375, "available": null, "available_now": false, "lease_term": "varies", "promotion": "base + ~$500 强制费 = Total Monthly", "url": "https://www.astonchicago.com/Floor-plans.aspx"}, {"apt_id": 6, "apt_name": "Aston Chicago", "address": "200 E Illinois St", "unit": "4 units", "plan": "B2", "beds": "1BR", "baths": 1.5, "sqft": 879, "rent_low": 3304, "rent_high": 3489, "available": null, "available_now": false, "lease_term": "varies", "promotion": "base + ~$500 强制费 = Total Monthly", "url": "https://www.astonchicago.com/Floor-plans.aspx"}, {"apt_id": 6, "apt_name": "Aston Chicago", "address": "200 E Illinois St", "unit": "3 units", "plan": "B3", "beds": "1BR", "baths": 1.5, "sqft": 969, "rent_low": 3469, "rent_high": 3659, "available": null, "available_now": false, "lease_term": "varies", "promotion": "base + ~$500 强制费 = Total Monthly", "url": "https://www.astonchicago.com/Floor-plans.aspx"}, {"apt_id": 6, "apt_name": "Aston Chicago", "address": "200 E Illinois St", "unit": "4 units", "plan": "C1", "beds": "2BR", "baths": 2, "sqft": 1079, "rent_low": 4306, "rent_high": 4486, "available": null, "available_now": false, "lease_term": "varies", "promotion": "base + ~$500 强制费 = Total Monthly", "url": "https://www.astonchicago.com/Floor-plans.aspx"}, {"apt_id": 6, "apt_name": "Aston Chicago", "address": "200 E Illinois St", "unit": "1 units", "plan": "C2", "beds": "2BR", "baths": 2, "sqft": 1217, "rent_low": 4486, "rent_high": null, "available": null, "available_now": false, "lease_term": "varies", "promotion": "base + ~$500 强制费 = Total Monthly", "url": "https://www.astonchicago.com/Floor-plans.aspx"}, {"apt_id": 6, "apt_name": "Aston Chicago", "address": "200 E Illinois St", "unit": "1 units", "plan": "D1", "beds": "3BR", "baths": 3, "sqft": 1443, "rent_low": 6342, "rent_high": null, "available": null, "available_now": false, "lease_term": "varies", "promotion": "base + ~$500 强制费 = Total Monthly", "url": "https://www.astonchicago.com/Floor-plans.aspx"}, {"apt_id": 7, "apt_name": "Arrive Streeterville", "address": "333 E Ontario St", "unit": "2 units", "plan": "04 Studio", "beds": "Studio", "baths": 1, "sqft": 603, "rent_low": 2049, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": null, "url": "https://arrivestreeterville.prospectportal.com/chicago/arrive-streeterville/conventional/floorplans"}, {"apt_id": 7, "apt_name": "Arrive Streeterville", "address": "333 E Ontario St", "unit": "2 units", "plan": "09 Studio", "beds": "Studio", "baths": 1, "sqft": 496, "rent_low": 2069, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": null, "url": "https://arrivestreeterville.prospectportal.com/chicago/arrive-streeterville/conventional/floorplans"}, {"apt_id": 7, "apt_name": "Arrive Streeterville", "address": "333 E Ontario St", "unit": "1 units", "plan": "12B Studio", "beds": "Studio", "baths": 1, "sqft": 520, "rent_low": 2129, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": null, "url": "https://arrivestreeterville.prospectportal.com/chicago/arrive-streeterville/conventional/floorplans"}, {"apt_id": 7, "apt_name": "Arrive Streeterville", "address": "333 E Ontario St", "unit": "1 units", "plan": "11B Studio", "beds": "Studio", "baths": 1, "sqft": 546, "rent_low": 2219, "rent_high": null, "available": "2026-05-30", "available_now": false, "lease_term": "10mo", "promotion": null, "url": "https://arrivestreeterville.prospectportal.com/chicago/arrive-streeterville/conventional/floorplans"}, {"apt_id": 7, "apt_name": "Arrive Streeterville", "address": "333 E Ontario St", "unit": "1 units", "plan": "06 Convertible", "beds": "Conv", "baths": 1, "sqft": 606, "rent_low": 2089, "rent_high": null, "available": null, "available_now": false, "lease_term": "15mo", "promotion": null, "url": "https://arrivestreeterville.prospectportal.com/chicago/arrive-streeterville/conventional/floorplans"}, {"apt_id": 7, "apt_name": "Arrive Streeterville", "address": "333 E Ontario St", "unit": "5 units", "plan": "08 Convertible", "beds": "Conv", "baths": 1, "sqft": 620, "rent_low": 2179, "rent_high": null, "available": null, "available_now": false, "lease_term": "15mo", "promotion": null, "url": "https://arrivestreeterville.prospectportal.com/chicago/arrive-streeterville/conventional/floorplans"}, {"apt_id": 7, "apt_name": "Arrive Streeterville", "address": "333 E Ontario St", "unit": "2 units", "plan": "10A Convertible", "beds": "Conv", "baths": 1, "sqft": 647, "rent_low": 2209, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": null, "url": "https://arrivestreeterville.prospectportal.com/chicago/arrive-streeterville/conventional/floorplans"}, {"apt_id": 7, "apt_name": "Arrive Streeterville", "address": "333 E Ontario St", "unit": "1 units", "plan": "10B Convertible", "beds": "Conv", "baths": 1, "sqft": 612, "rent_low": 2529, "rent_high": null, "available": "2026-05-16", "available_now": false, "lease_term": "10mo", "promotion": null, "url": "https://arrivestreeterville.prospectportal.com/chicago/arrive-streeterville/conventional/floorplans"}, {"apt_id": 7, "apt_name": "Arrive Streeterville", "address": "333 E Ontario St", "unit": "1 units", "plan": "05 One Bed", "beds": "1BR", "baths": 1, "sqft": 739, "rent_low": 2529, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": null, "url": "https://arrivestreeterville.prospectportal.com/chicago/arrive-streeterville/conventional/floorplans"}, {"apt_id": 7, "apt_name": "Arrive Streeterville", "address": "333 E Ontario St", "unit": "3 units", "plan": "07 One Bed", "beds": "1BR", "baths": 1, "sqft": 810, "rent_low": 2609, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": null, "url": "https://arrivestreeterville.prospectportal.com/chicago/arrive-streeterville/conventional/floorplans"}, {"apt_id": 7, "apt_name": "Arrive Streeterville", "address": "333 E Ontario St", "unit": "3 units", "plan": "1BR (11)", "beds": "1BR", "baths": 1, "sqft": 911, "rent_low": 2819, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": null, "url": "https://arrivestreeterville.prospectportal.com/chicago/arrive-streeterville/conventional/floorplans"}, {"apt_id": 7, "apt_name": "Arrive Streeterville", "address": "333 E Ontario St", "unit": "2 units", "plan": "03 One Bed", "beds": "1BR", "baths": 1, "sqft": 781, "rent_low": 2859, "rent_high": null, "available": null, "available_now": false, "lease_term": "10mo", "promotion": null, "url": "https://arrivestreeterville.prospectportal.com/chicago/arrive-streeterville/conventional/floorplans"}, {"apt_id": 7, "apt_name": "Arrive Streeterville", "address": "333 E Ontario St", "unit": "2 units", "plan": "01 One Bed", "beds": "1BR", "baths": 1, "sqft": 854, "rent_low": 2899, "rent_high": null, "available": null, "available_now": false, "lease_term": "10mo", "promotion": null, "url": "https://arrivestreeterville.prospectportal.com/chicago/arrive-streeterville/conventional/floorplans"}, {"apt_id": 7, "apt_name": "Arrive Streeterville", "address": "333 E Ontario St", "unit": "1 units", "plan": "1BR (?)", "beds": "1BR", "baths": 1, "sqft": 854, "rent_low": 2959, "rent_high": null, "available": null, "available_now": false, "lease_term": "10mo", "promotion": null, "url": "https://arrivestreeterville.prospectportal.com/chicago/arrive-streeterville/conventional/floorplans"}, {"apt_id": 7, "apt_name": "Arrive Streeterville", "address": "333 E Ontario St", "unit": "2 units", "plan": "02 Two Bed", "beds": "2BR", "baths": 2, "sqft": 1243, "rent_low": 4059, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": null, "url": "https://arrivestreeterville.prospectportal.com/chicago/arrive-streeterville/conventional/floorplans"}, {"apt_id": 8, "apt_name": "Residences at 8 E Huron", "address": "8 E Huron St", "unit": "#607", "plan": "Junior", "beds": "Jr 1BR", "baths": 1, "sqft": 665, "rent_low": 2900, "rent_high": null, "available": "2026-07-05", "available_now": false, "lease_term": null, "promotion": null, "url": "https://8easthuron.securecafe.com/onlineleasing/residences-at-8-east-huron/oleapplication.aspx"}, {"apt_id": 8, "apt_name": "Residences at 8 E Huron", "address": "8 E Huron St", "unit": "#707", "plan": "Junior", "beds": "Jr 1BR", "baths": 1, "sqft": 665, "rent_low": 3095, "rent_high": null, "available": "2026-07-05", "available_now": false, "lease_term": null, "promotion": null, "url": "https://8easthuron.securecafe.com/onlineleasing/residences-at-8-east-huron/oleapplication.aspx"}, {"apt_id": 8, "apt_name": "Residences at 8 E Huron", "address": "8 E Huron St", "unit": "#505", "plan": "1BR/1ba", "beds": "1BR", "baths": 1, "sqft": 775, "rent_low": 3428, "rent_high": null, "available": "Now", "available_now": true, "lease_term": null, "promotion": null, "url": "https://8easthuron.securecafe.com/onlineleasing/residences-at-8-east-huron/oleapplication.aspx"}, {"apt_id": 8, "apt_name": "Residences at 8 E Huron", "address": "8 E Huron St", "unit": "#1104", "plan": "1BR/1ba", "beds": "1BR", "baths": 1, "sqft": 725, "rent_low": 3284, "rent_high": null, "available": "2026-08-05", "available_now": false, "lease_term": null, "promotion": null, "url": "https://8easthuron.securecafe.com/onlineleasing/residences-at-8-east-huron/oleapplication.aspx"}, {"apt_id": 8, "apt_name": "Residences at 8 E Huron", "address": "8 E Huron St", "unit": "#1205", "plan": "1BR/1ba", "beds": "1BR", "baths": 1, "sqft": 775, "rent_low": 3973, "rent_high": null, "available": "2026-06-05", "available_now": false, "lease_term": null, "promotion": null, "url": "https://8easthuron.securecafe.com/onlineleasing/residences-at-8-east-huron/oleapplication.aspx"}, {"apt_id": 8, "apt_name": "Residences at 8 E Huron", "address": "8 E Huron St", "unit": "#1903", "plan": "2BR/2.5ba", "beds": "2BR", "baths": 2.5, "sqft": 1460, "rent_low": 6917, "rent_high": null, "available": "2026-05-14", "available_now": false, "lease_term": null, "promotion": null, "url": "https://8easthuron.securecafe.com/onlineleasing/residences-at-8-east-huron/oleapplication.aspx"}, {"apt_id": 9, "apt_name": "The Streeter", "address": "345 E Ohio St", "unit": "plan", "plan": "Studio E", "beds": "Studio", "baths": 1, "sqft": 585, "rent_low": 2565, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.thestreeter.com/floor-plans/"}, {"apt_id": 9, "apt_name": "The Streeter", "address": "345 E Ohio St", "unit": "plan", "plan": "Studio H", "beds": "Studio", "baths": 1, "sqft": 585, "rent_low": 2585, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.thestreeter.com/floor-plans/"}, {"apt_id": 9, "apt_name": "The Streeter", "address": "345 E Ohio St", "unit": "plan", "plan": "Jr 1BR C", "beds": "Jr 1BR", "baths": 1, "sqft": 713, "rent_low": 2905, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.thestreeter.com/floor-plans/"}, {"apt_id": 9, "apt_name": "The Streeter", "address": "345 E Ohio St", "unit": "plan", "plan": "Jr 1BR J", "beds": "Jr 1BR", "baths": 1, "sqft": 711, "rent_low": 3025, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.thestreeter.com/floor-plans/"}, {"apt_id": 9, "apt_name": "The Streeter", "address": "345 E Ohio St", "unit": "plan", "plan": "1BR B", "beds": "1BR", "baths": 1, "sqft": 785, "rent_low": 3130, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.thestreeter.com/floor-plans/"}, {"apt_id": 9, "apt_name": "The Streeter", "address": "345 E Ohio St", "unit": "plan", "plan": "Large 1BR I", "beds": "1BR", "baths": 1, "sqft": 819, "rent_low": 3270, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.thestreeter.com/floor-plans/"}, {"apt_id": 9, "apt_name": "The Streeter", "address": "345 E Ohio St", "unit": "plan", "plan": "1BR K", "beds": "1BR", "baths": 1, "sqft": 779, "rent_low": 3325, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.thestreeter.com/floor-plans/"}, {"apt_id": 9, "apt_name": "The Streeter", "address": "345 E Ohio St", "unit": "plan", "plan": "1BR+Den L", "beds": "1BR+Den", "baths": 1.5, "sqft": 1043, "rent_low": 4245, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.thestreeter.com/floor-plans/"}, {"apt_id": 9, "apt_name": "The Streeter", "address": "345 E Ohio St", "unit": "plan", "plan": "2BR A", "beds": "2BR", "baths": 2, "sqft": 1278, "rent_low": 4510, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.thestreeter.com/floor-plans/"}, {"apt_id": 9, "apt_name": "The Streeter", "address": "345 E Ohio St", "unit": "plan", "plan": "2BR G", "beds": "2BR", "baths": 2, "sqft": 1233, "rent_low": 4515, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.thestreeter.com/floor-plans/"}, {"apt_id": 9, "apt_name": "The Streeter", "address": "345 E Ohio St", "unit": "plan", "plan": "3BR+Den N", "beds": "3BR+Den", "baths": 3, "sqft": 1813, "rent_low": 7285, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.thestreeter.com/floor-plans/"}, {"apt_id": 10, "apt_name": "State & Chestnut", "address": "845 N State St", "unit": "Apt 2414", "plan": "SC1", "beds": "Studio", "baths": 1, "sqft": 605, "rent_low": 3107, "rent_high": null, "available": "Now", "available_now": true, "lease_term": "12mo", "promotion": "Gigabit网络+水电网气全包", "url": "https://www.stateandchestnut.com/apartments"}, {"apt_id": 10, "apt_name": "State & Chestnut", "address": "845 N State St", "unit": "Apt 2206", "plan": "A2", "beds": "1BR", "baths": 1, "sqft": 600, "rent_low": 3185, "rent_high": null, "available": "Now", "available_now": true, "lease_term": "12mo", "promotion": "Gigabit网络+水电网气全包", "url": "https://www.stateandchestnut.com/apartments"}, {"apt_id": 10, "apt_name": "State & Chestnut", "address": "845 N State St", "unit": "Apt 3413", "plan": "A13", "beds": "1BR", "baths": 1, "sqft": 820, "rent_low": 3780, "rent_high": null, "available": "Now", "available_now": true, "lease_term": "12mo", "promotion": "Gigabit网络+水电网气全包", "url": "https://www.stateandchestnut.com/apartments"}, {"apt_id": 10, "apt_name": "State & Chestnut", "address": "845 N State St", "unit": "Apt 3211", "plan": "B5", "beds": "2BR", "baths": 2, "sqft": 1089, "rent_low": 5041, "rent_high": null, "available": "Now", "available_now": true, "lease_term": "12mo", "promotion": "Gigabit网络+水电网气全包", "url": "https://www.stateandchestnut.com/apartments"}, {"apt_id": 10, "apt_name": "State & Chestnut", "address": "845 N State St", "unit": "Apt 1306", "plan": "A2", "beds": "1BR", "baths": 1, "sqft": 600, "rent_low": 2945, "rent_high": null, "available": "2026-05-16", "available_now": false, "lease_term": "12mo", "promotion": "Gigabit网络+水电网气全包", "url": "https://www.stateandchestnut.com/apartments"}, {"apt_id": 10, "apt_name": "State & Chestnut", "address": "845 N State St", "unit": "Apt 1704", "plan": "A1", "beds": "1BR", "baths": 1, "sqft": 586, "rent_low": 3080, "rent_high": null, "available": "2026-05-16", "available_now": false, "lease_term": "12mo", "promotion": "Gigabit网络+水电网气全包", "url": "https://www.stateandchestnut.com/apartments"}, {"apt_id": 10, "apt_name": "State & Chestnut", "address": "845 N State St", "unit": "Apt 3213", "plan": "A13", "beds": "1BR", "baths": 1, "sqft": 820, "rent_low": 3730, "rent_high": null, "available": "2026-06-06", "available_now": false, "lease_term": "12mo", "promotion": "Gigabit网络+水电网气全包", "url": "https://www.stateandchestnut.com/apartments"}, {"apt_id": 10, "apt_name": "State & Chestnut", "address": "845 N State St", "unit": "Apt 1612", "plan": "S1", "beds": "Studio", "baths": 1, "sqft": 463, "rent_low": 2500, "rent_high": null, "available": "2026-06-13", "available_now": false, "lease_term": "12mo", "promotion": "Gigabit网络+水电网气全包", "url": "https://www.stateandchestnut.com/apartments"}, {"apt_id": 10, "apt_name": "State & Chestnut", "address": "845 N State St", "unit": "Apt 0807", "plan": "A4", "beds": "1BR", "baths": 1, "sqft": 689, "rent_low": 3274, "rent_high": null, "available": "2026-06-13", "available_now": false, "lease_term": "12mo", "promotion": "Gigabit网络+水电网气全包", "url": "https://www.stateandchestnut.com/apartments"}, {"apt_id": 10, "apt_name": "State & Chestnut", "address": "845 N State St", "unit": "Apt 1907", "plan": "A4", "beds": "1BR", "baths": 1, "sqft": 689, "rent_low": 3339, "rent_high": null, "available": "2026-06-13", "available_now": false, "lease_term": "12mo", "promotion": "Gigabit网络+水电网气全包", "url": "https://www.stateandchestnut.com/apartments"}, {"apt_id": 10, "apt_name": "State & Chestnut", "address": "845 N State St", "unit": "Apt 3111", "plan": "B1", "beds": "2BR", "baths": 2, "sqft": 985, "rent_low": 4456, "rent_high": null, "available": "2026-06-13", "available_now": false, "lease_term": "12mo", "promotion": "Gigabit网络+水电网气全包", "url": "https://www.stateandchestnut.com/apartments"}, {"apt_id": 10, "apt_name": "State & Chestnut", "address": "845 N State St", "unit": "Apt 3207", "plan": "A4", "beds": "1BR", "baths": 1, "sqft": 689, "rent_low": 3389, "rent_high": null, "available": "2026-06-27", "available_now": false, "lease_term": "12mo", "promotion": "Gigabit网络+水电网气全包", "url": "https://www.stateandchestnut.com/apartments"}, {"apt_id": 10, "apt_name": "State & Chestnut", "address": "845 N State St", "unit": "Apt 1514", "plan": "SC1", "beds": "Studio", "baths": 1, "sqft": 605, "rent_low": 3014, "rent_high": null, "available": "2026-07-03", "available_now": false, "lease_term": "11mo", "promotion": "Gigabit网络+水电网气全包", "url": "https://www.stateandchestnut.com/apartments"}, {"apt_id": 10, "apt_name": "State & Chestnut", "address": "845 N State St", "unit": "Apt 1210", "plan": "A3", "beds": "1BR", "baths": 1, "sqft": 615, "rent_low": 3077, "rent_high": null, "available": "2026-07-04", "available_now": false, "lease_term": "12mo", "promotion": "Gigabit网络+水电网气全包", "url": "https://www.stateandchestnut.com/apartments"}, {"apt_id": 10, "apt_name": "State & Chestnut", "address": "845 N State St", "unit": "Apt 2610", "plan": "A7", "beds": "1BR", "baths": 1, "sqft": 713, "rent_low": 3510, "rent_high": null, "available": "2026-07-04", "available_now": false, "lease_term": "12mo", "promotion": "Gigabit网络+水电网气全包", "url": "https://www.stateandchestnut.com/apartments"}, {"apt_id": 10, "apt_name": "State & Chestnut", "address": "845 N State St", "unit": "Apt 2304", "plan": "A8", "beds": "1BR", "baths": 1, "sqft": 742, "rent_low": 3601, "rent_high": null, "available": "2026-07-04", "available_now": false, "lease_term": "12mo", "promotion": "Gigabit网络+水电网气全包", "url": "https://www.stateandchestnut.com/apartments"}, {"apt_id": 10, "apt_name": "State & Chestnut", "address": "845 N State St", "unit": "Apt 2509", "plan": "A6", "beds": "1BR", "baths": 1, "sqft": 694, "rent_low": 3167, "rent_high": null, "available": "2026-07-11", "available_now": false, "lease_term": "12mo", "promotion": "Gigabit网络+水电网气全包", "url": "https://www.stateandchestnut.com/apartments"}, {"apt_id": 10, "apt_name": "State & Chestnut", "address": "845 N State St", "unit": "Apt 2609", "plan": "A6", "beds": "1BR", "baths": 1, "sqft": 694, "rent_low": 3177, "rent_high": null, "available": "2026-07-14", "available_now": false, "lease_term": "12mo", "promotion": "Gigabit网络+水电网气全包", "url": "https://www.stateandchestnut.com/apartments"}, {"apt_id": 10, "apt_name": "State & Chestnut", "address": "845 N State St", "unit": "Apt 2102", "plan": "B2", "beds": "2BR", "baths": 2, "sqft": 1029, "rent_low": 4651, "rent_high": null, "available": "2026-07-25", "available_now": false, "lease_term": "12mo", "promotion": "Gigabit网络+水电网气全包", "url": "https://www.stateandchestnut.com/apartments"}, {"apt_id": 10, "apt_name": "State & Chestnut", "address": "845 N State St", "unit": "Apt 3210", "plan": "A7", "beds": "1BR", "baths": 1, "sqft": 713, "rent_low": 3590, "rent_high": null, "available": "2026-08-01", "available_now": false, "lease_term": "12mo", "promotion": "Gigabit网络+水电网气全包", "url": "https://www.stateandchestnut.com/apartments"}, {"apt_id": 11, "apt_name": "Axis Apartments & Lofts", "address": "441 E Erie St", "unit": "plan", "plan": "Studio", "beds": "Studio", "baths": 1, "sqft": null, "rent_low": 1920, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": null, "url": "https://axis.groupfox.com/floorplans"}, {"apt_id": 11, "apt_name": "Axis Apartments & Lofts", "address": "441 E Erie St", "unit": "plan", "plan": "Convertible Studio", "beds": "Studio", "baths": 1, "sqft": null, "rent_low": 2100, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": null, "url": "https://axis.groupfox.com/floorplans"}, {"apt_id": 11, "apt_name": "Axis Apartments & Lofts", "address": "441 E Erie St", "unit": "plan", "plan": "One Bedroom", "beds": "1BR", "baths": 1, "sqft": null, "rent_low": 2390, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": null, "url": "https://axis.groupfox.com/floorplans"}, {"apt_id": 11, "apt_name": "Axis Apartments & Lofts", "address": "441 E Erie St", "unit": "plan", "plan": "One Bedroom Plus Den", "beds": "1BR", "baths": 1.5, "sqft": null, "rent_low": 2820, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": null, "url": "https://axis.groupfox.com/floorplans"}, {"apt_id": 11, "apt_name": "Axis Apartments & Lofts", "address": "441 E Erie St", "unit": "plan", "plan": "One Bedroom Loft", "beds": "1BR", "baths": 1, "sqft": null, "rent_low": 3040, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": null, "url": "https://axis.groupfox.com/floorplans"}, {"apt_id": 11, "apt_name": "Axis Apartments & Lofts", "address": "441 E Erie St", "unit": "plan", "plan": "Two Bedroom", "beds": "2BR", "baths": 1.5, "sqft": null, "rent_low": 3025, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": null, "url": "https://axis.groupfox.com/floorplans"}, {"apt_id": 11, "apt_name": "Axis Apartments & Lofts", "address": "441 E Erie St", "unit": "plan", "plan": "Two Bedroom Loft", "beds": "2BR", "baths": 2, "sqft": null, "rent_low": 3800, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": "Specials Available (new residents, 12mo lease)", "url": "https://axis.groupfox.com/floorplans"}, {"apt_id": 11, "apt_name": "Axis Apartments & Lofts", "address": "441 E Erie St", "unit": "plan", "plan": "Three Bedroom Loft", "beds": "3BR", "baths": 2, "sqft": null, "rent_low": 4920, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": null, "url": "https://axis.groupfox.com/floorplans"}, {"apt_id": 11, "apt_name": "Axis Apartments & Lofts", "address": "441 E Erie St", "unit": "call", "plan": "Two Bedroom Deluxe", "beds": "2BR", "baths": 2, "sqft": null, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://axis.groupfox.com/floorplans"}, {"apt_id": 12, "apt_name": "Chestnut Place", "address": "8 W Chestnut St", "unit": "plan", "plan": "J", "beds": "Studio", "baths": 1, "sqft": 624, "rent_low": 2435, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://chestnutplace.com/floorplans/"}, {"apt_id": 12, "apt_name": "Chestnut Place", "address": "8 W Chestnut St", "unit": "plan", "plan": "H", "beds": "Studio", "baths": 1, "sqft": 662, "rent_low": 2441, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://chestnutplace.com/floorplans/"}, {"apt_id": 12, "apt_name": "Chestnut Place", "address": "8 W Chestnut St", "unit": "plan", "plan": "E", "beds": "1BR", "baths": 1, "sqft": 707, "rent_low": 2767, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://chestnutplace.com/floorplans/"}, {"apt_id": 12, "apt_name": "Chestnut Place", "address": "8 W Chestnut St", "unit": "plan", "plan": "D", "beds": "1BR", "baths": 1, "sqft": 715, "rent_low": 2726, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://chestnutplace.com/floorplans/"}, {"apt_id": 12, "apt_name": "Chestnut Place", "address": "8 W Chestnut St", "unit": "plan", "plan": "A", "beds": "2BR", "baths": 1.5, "sqft": 914, "rent_low": 3551, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://chestnutplace.com/floorplans/"}, {"apt_id": 12, "apt_name": "Chestnut Place", "address": "8 W Chestnut St", "unit": "plan", "plan": "K", "beds": "2BR", "baths": 1.5, "sqft": 946, "rent_low": 3744, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://chestnutplace.com/floorplans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 2003", "plan": "B", "beds": "Studio", "baths": 1, "sqft": 576, "rent_low": 2412, "rent_high": null, "available": "Now", "available_now": true, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 1104", "plan": "J", "beds": "Studio", "baths": 1, "sqft": 655, "rent_low": 2435, "rent_high": null, "available": "2026-08-07", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 1204", "plan": "P", "beds": "Studio", "baths": 1, "sqft": 601, "rent_low": 2440, "rent_high": null, "available": "2026-08-13", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 2703", "plan": "B", "beds": "Studio", "baths": 1, "sqft": 576, "rent_low": 2466, "rent_high": null, "available": "Now", "available_now": true, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 3503", "plan": "B", "beds": "Studio", "baths": 1, "sqft": 576, "rent_low": 2485, "rent_high": null, "available": "Now", "available_now": true, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 3404", "plan": "J", "beds": "Studio", "baths": 1, "sqft": 655, "rent_low": 2558, "rent_high": null, "available": "2026-07-09", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 4104", "plan": "J", "beds": "Studio", "baths": 1, "sqft": 655, "rent_low": 2743, "rent_high": null, "available": "2026-06-30", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 5204", "plan": "J", "beds": "Studio", "baths": 1, "sqft": 655, "rent_low": 2749, "rent_high": null, "available": "2026-06-15", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 1805", "plan": "C", "beds": "Studio", "baths": 1, "sqft": 708, "rent_low": 2980, "rent_high": null, "available": "2026-07-21", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 1905", "plan": "C", "beds": "Studio", "baths": 1, "sqft": 708, "rent_low": 3146, "rent_high": null, "available": "2026-07-09", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 0306", "plan": "N", "beds": "1BR", "baths": 1, "sqft": 876, "rent_low": 2943, "rent_high": null, "available": "2026-07-09", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 2607", "plan": "D", "beds": "1BR", "baths": 1, "sqft": 814, "rent_low": 3092, "rent_high": null, "available": "Now", "available_now": true, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 3007", "plan": "D", "beds": "1BR", "baths": 1, "sqft": 814, "rent_low": 3122, "rent_high": null, "available": "Now", "available_now": true, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 4007", "plan": "D", "beds": "1BR", "baths": 1, "sqft": 814, "rent_low": 3127, "rent_high": null, "available": "Now", "available_now": true, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 4906", "plan": "I", "beds": "1BR", "baths": 1, "sqft": 846, "rent_low": 3131, "rent_high": null, "available": "Now", "available_now": true, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 3111", "plan": "F", "beds": "1BR", "baths": 1, "sqft": 785, "rent_low": 3145, "rent_high": null, "available": "2026-06-10", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 2807", "plan": "D", "beds": "1BR", "baths": 1, "sqft": 814, "rent_low": 3151, "rent_high": null, "available": "2026-06-08", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 5007", "plan": "D", "beds": "1BR", "baths": 1, "sqft": 814, "rent_low": 3185, "rent_high": null, "available": "Now", "available_now": true, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 4911", "plan": "F", "beds": "1BR", "baths": 1, "sqft": 785, "rent_low": 3188, "rent_high": null, "available": "2026-05-20", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 2907", "plan": "D", "beds": "1BR", "baths": 1, "sqft": 814, "rent_low": 3234, "rent_high": null, "available": "2026-07-10", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 2707", "plan": "D", "beds": "1BR", "baths": 1, "sqft": 814, "rent_low": 3279, "rent_high": null, "available": "Now", "available_now": true, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 1808", "plan": "H", "beds": "1BR", "baths": 1, "sqft": 929, "rent_low": 3528, "rent_high": null, "available": "Now", "available_now": true, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 4708", "plan": "H", "beds": "1BR", "baths": 1, "sqft": 929, "rent_low": 3714, "rent_high": null, "available": "Now", "available_now": true, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 4408", "plan": "H", "beds": "1BR", "baths": 1, "sqft": 929, "rent_low": 3753, "rent_high": null, "available": "2026-05-19", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 4808", "plan": "H", "beds": "1BR", "baths": 1, "sqft": 929, "rent_low": 3807, "rent_high": null, "available": "2026-05-27", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 0701", "plan": "A", "beds": "2BR", "baths": 2, "sqft": 1226, "rent_low": 4624, "rent_high": null, "available": "Now", "available_now": true, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 0801", "plan": "A", "beds": "2BR", "baths": 2, "sqft": 1226, "rent_low": 4673, "rent_high": null, "available": "Now", "available_now": true, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 2110", "plan": "G", "beds": "2BR", "baths": 2, "sqft": 1235, "rent_low": 4737, "rent_high": null, "available": "Now", "available_now": true, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 1810", "plan": "G", "beds": "2BR", "baths": 2, "sqft": 1235, "rent_low": 4743, "rent_high": null, "available": "2026-07-15", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 1710", "plan": "G", "beds": "2BR", "baths": 2, "sqft": 1235, "rent_low": 4788, "rent_high": null, "available": "2026-07-10", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 2301", "plan": "A", "beds": "2BR", "baths": 2, "sqft": 1226, "rent_low": 4804, "rent_high": null, "available": "2026-06-30", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 2101", "plan": "A", "beds": "2BR", "baths": 2, "sqft": 1226, "rent_low": 4808, "rent_high": null, "available": "2026-07-24", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 13, "apt_name": "Atwater Apartments", "address": "355 E Ohio St", "unit": "Apt 3801", "plan": "A", "beds": "2BR", "baths": 2, "sqft": 1226, "rent_low": 4963, "rent_high": null, "available": "2026-07-17", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.liveatwaterchicago.com/floor-plans/"}, {"apt_id": 14, "apt_name": "ReNew Waterside", "address": "420 E Ohio St", "unit": "plan", "plan": "Studio", "beds": "Studio", "baths": 1, "sqft": 580, "rent_low": 2279, "rent_high": null, "available": "1 avail", "available_now": false, "lease_term": "12mo", "promotion": null, "url": "https://renewwaterside.prospectportal.com/chicago/renew-waterside/conventional/floorplans"}, {"apt_id": 14, "apt_name": "ReNew Waterside", "address": "420 E Ohio St", "unit": "plan", "plan": "Junior 1-Bedroom", "beds": "Studio", "baths": 1, "sqft": 656, "rent_low": 2709, "rent_high": null, "available": "2026-08-06", "available_now": false, "lease_term": "12mo", "promotion": null, "url": "https://renewwaterside.prospectportal.com/chicago/renew-waterside/conventional/floorplans"}, {"apt_id": 14, "apt_name": "ReNew Waterside", "address": "420 E Ohio St", "unit": "plan", "plan": "Convertible", "beds": "Studio", "baths": 1, "sqft": 656, "rent_low": 2869, "rent_high": null, "available": "2026-07-14", "available_now": false, "lease_term": "12mo", "promotion": null, "url": "https://renewwaterside.prospectportal.com/chicago/renew-waterside/conventional/floorplans"}, {"apt_id": 14, "apt_name": "ReNew Waterside", "address": "420 E Ohio St", "unit": "plan", "plan": "1AD Corner Suite", "beds": "1BR", "baths": 1, "sqft": 895, "rent_low": 3369, "rent_high": null, "available": "2026-07-08", "available_now": false, "lease_term": "12mo", "promotion": null, "url": "https://renewwaterside.prospectportal.com/chicago/renew-waterside/conventional/floorplans"}, {"apt_id": 14, "apt_name": "ReNew Waterside", "address": "420 E Ohio St", "unit": "plan", "plan": "3E City View", "beds": "3BR", "baths": 3, "sqft": 1546, "rent_low": 6334, "rent_high": null, "available": "2026-07-30", "available_now": false, "lease_term": "12mo", "promotion": null, "url": "https://renewwaterside.prospectportal.com/chicago/renew-waterside/conventional/floorplans"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 0402", "plan": "Studio 02-Avenue", "beds": "Studio", "baths": 1, "sqft": 518, "rent_low": 2727, "rent_high": 2797, "available": "2026-05-24", "available_now": false, "lease_term": "12mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 0210", "plan": "Studio 10-Avenue", "beds": "Studio", "baths": 1, "sqft": 636, "rent_low": 2902, "rent_high": 2972, "available": "2026-05-20", "available_now": false, "lease_term": "12mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 0410", "plan": "Studio 10-Avenue", "beds": "Studio", "baths": 1, "sqft": 636, "rent_low": 2912, "rent_high": 2982, "available": "2026-05-12", "available_now": false, "lease_term": "12mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 0510", "plan": "Studio 10-Avenue", "beds": "Studio", "baths": 1, "sqft": 636, "rent_low": 2943, "rent_high": 3013, "available": "2026-06-16", "available_now": false, "lease_term": "11mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 4205", "plan": "Convertible 05-Tower", "beds": "Conv", "baths": 1, "sqft": 558, "rent_low": 2893, "rent_high": 2963, "available": "2026-07-04", "available_now": false, "lease_term": "10mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 1402", "plan": "1BR 05-Avenue", "beds": "1BR", "baths": 1, "sqft": 698, "rent_low": 3147, "rent_high": 3217, "available": "2026-06-23", "available_now": false, "lease_term": "12mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 2909", "plan": "1BR 09-Tower", "beds": "1BR", "baths": 1, "sqft": 735, "rent_low": 3424, "rent_high": 3494, "available": "2026-06-13", "available_now": false, "lease_term": "12mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 1606", "plan": "1BR 06-Tower", "beds": "1BR", "baths": 1, "sqft": 751, "rent_low": 3435, "rent_high": 3505, "available": "2026-07-12", "available_now": false, "lease_term": "11mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 4007", "plan": "1BR 07-Tower", "beds": "1BR", "baths": 1, "sqft": 765, "rent_low": 3400, "rent_high": 3470, "available": "2026-07-14", "available_now": false, "lease_term": "11mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 4307", "plan": "1BR 07-Tower", "beds": "1BR", "baths": 1, "sqft": 765, "rent_low": 3452, "rent_high": 3522, "available": "2026-06-28", "available_now": false, "lease_term": "12mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 1908", "plan": "1BR 08-Tower", "beds": "1BR", "baths": 1, "sqft": 811, "rent_low": 3484, "rent_high": 3554, "available": "2026-06-30", "available_now": false, "lease_term": "11mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 1001", "plan": "1BR 01-Tower/Terrace", "beds": "1BR", "baths": 1, "sqft": 710, "rent_low": 3552, "rent_high": 3622, "available": "2026-06-21", "available_now": false, "lease_term": "12mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 4008", "plan": "1BR 08-Tower", "beds": "1BR", "baths": 1, "sqft": 811, "rent_low": 3665, "rent_high": 3735, "available": "2026-07-25", "available_now": false, "lease_term": "11mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 4306", "plan": "1BR 06-Tower", "beds": "1BR", "baths": 1, "sqft": 751, "rent_low": 3695, "rent_high": 3765, "available": "2026-05-12", "available_now": false, "lease_term": "13mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 2503", "plan": "1BR 03-Tower", "beds": "1BR", "baths": 1, "sqft": 892, "rent_low": 3805, "rent_high": 3875, "available": null, "available_now": true, "lease_term": "13mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 3603", "plan": "1BR 03-Tower", "beds": "1BR", "baths": 1, "sqft": 892, "rent_low": 3835, "rent_high": 3905, "available": "2026-07-25", "available_now": false, "lease_term": "11mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 3303", "plan": "1BR 03-Tower A", "beds": "1BR", "baths": 1, "sqft": 892, "rent_low": 3930, "rent_high": 4000, "available": "2026-05-13", "available_now": false, "lease_term": "13mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 3803", "plan": "1BR 03-Tower A", "beds": "1BR", "baths": 1, "sqft": 892, "rent_low": 3950, "rent_high": 4020, "available": null, "available_now": true, "lease_term": "13mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 2210", "plan": "2BR 10-Tower", "beds": "2BR", "baths": 2, "sqft": 1208, "rent_low": 5168, "rent_high": 5238, "available": "2026-06-14", "available_now": false, "lease_term": "11mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 2110", "plan": "2BR 10-Tower", "beds": "2BR", "baths": 2, "sqft": 1208, "rent_low": 5271, "rent_high": 5341, "available": "2026-07-10", "available_now": false, "lease_term": "10mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 15, "apt_name": "Moment by Windsor", "address": "545 N McClurg Ct", "unit": "Apt 3504", "plan": "2BR 04-Tower A", "beds": "2BR", "baths": 2, "sqft": 1196, "rent_low": 5823, "rent_high": 5893, "available": "2026-05-27", "available_now": false, "lease_term": "12mo", "promotion": "Total Monthly = base + 强制费", "url": "https://www.windsorcommunities.com/properties/moment/floorplans/"}, {"apt_id": 16, "apt_name": "Sienna Chicago", "address": "423 E Ohio St", "unit": "Unit 1", "plan": "2BR", "beds": "2BR", "baths": 2, "sqft": 1420, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "Call for details", "url": "https://www.siennachicago.com/floorplans"}, {"apt_id": 16, "apt_name": "Sienna Chicago", "address": "423 E Ohio St", "unit": "Unit 2", "plan": "2BR", "beds": "2BR", "baths": 2, "sqft": 1083, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "Call for details", "url": "https://www.siennachicago.com/floorplans"}, {"apt_id": 16, "apt_name": "Sienna Chicago", "address": "423 E Ohio St", "unit": "Unit 3", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": 738, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "Call for details", "url": "https://www.siennachicago.com/floorplans"}, {"apt_id": 16, "apt_name": "Sienna Chicago", "address": "423 E Ohio St", "unit": "Unit 4", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": 795, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "Call for details", "url": "https://www.siennachicago.com/floorplans"}, {"apt_id": 16, "apt_name": "Sienna Chicago", "address": "423 E Ohio St", "unit": "Unit 5", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": 795, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "Call for details", "url": "https://www.siennachicago.com/floorplans"}, {"apt_id": 16, "apt_name": "Sienna Chicago", "address": "423 E Ohio St", "unit": "Unit 6", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": 792, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "Call for details", "url": "https://www.siennachicago.com/floorplans"}, {"apt_id": 16, "apt_name": "Sienna Chicago", "address": "423 E Ohio St", "unit": "Unit 7", "plan": "2BR", "beds": "2BR", "baths": 2, "sqft": 1194, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "Call for details", "url": "https://www.siennachicago.com/floorplans"}, {"apt_id": 16, "apt_name": "Sienna Chicago", "address": "423 E Ohio St", "unit": "Unit 8", "plan": "2BR", "beds": "2BR", "baths": 2, "sqft": 1312, "rent_low": 4487, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.siennachicago.com/floorplans"}, {"apt_id": 16, "apt_name": "Sienna Chicago", "address": "423 E Ohio St", "unit": "Unit 9", "plan": "2BR", "beds": "2BR", "baths": 2, "sqft": 1410, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "Call for details", "url": "https://www.siennachicago.com/floorplans"}, {"apt_id": 16, "apt_name": "Sienna Chicago", "address": "423 E Ohio St", "unit": "Unit 10", "plan": "2BR", "beds": "2BR", "baths": 2, "sqft": 1405, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "Call for details", "url": "https://www.siennachicago.com/floorplans"}, {"apt_id": 17, "apt_name": "465 North Park", "address": "465 N Park Dr", "unit": "Residence 0406", "plan": "Studio", "beds": "Studio", "baths": 1, "sqft": 572, "rent_low": 2490, "rent_high": null, "available": "Now", "available_now": true, "lease_term": null, "promotion": null, "url": "https://www.465northpark.com/floor-plans-result/"}, {"apt_id": 17, "apt_name": "465 North Park", "address": "465 N Park Dr", "unit": "Residence 1503", "plan": "Studio", "beds": "Studio", "baths": 1, "sqft": 633, "rent_low": 2845, "rent_high": null, "available": "2026-07-09", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.465northpark.com/floor-plans-result/"}, {"apt_id": 17, "apt_name": "465 North Park", "address": "465 N Park Dr", "unit": "Residence 2203", "plan": "Studio", "beds": "Studio", "baths": 1, "sqft": 633, "rent_low": 2915, "rent_high": null, "available": "2026-07-06", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.465northpark.com/floor-plans-result/"}, {"apt_id": 17, "apt_name": "465 North Park", "address": "465 N Park Dr", "unit": "Residence 3403", "plan": "Studio", "beds": "Studio", "baths": 1, "sqft": 633, "rent_low": 3115, "rent_high": null, "available": "2026-07-12", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.465northpark.com/floor-plans-result/"}, {"apt_id": 17, "apt_name": "465 North Park", "address": "465 N Park Dr", "unit": "Residence 0907", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": 724, "rent_low": 3208, "rent_high": null, "available": "2026-05-22", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.465northpark.com/floor-plans-result/"}, {"apt_id": 17, "apt_name": "465 North Park", "address": "465 N Park Dr", "unit": "Residence 1402", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": 715, "rent_low": 3240, "rent_high": null, "available": "2026-07-17", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.465northpark.com/floor-plans-result/"}, {"apt_id": 17, "apt_name": "465 North Park", "address": "465 N Park Dr", "unit": "Residence 2602", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": 715, "rent_low": 3360, "rent_high": null, "available": "2026-07-05", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.465northpark.com/floor-plans-result/"}, {"apt_id": 17, "apt_name": "465 North Park", "address": "465 N Park Dr", "unit": "Residence 2512", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": 667, "rent_low": 3470, "rent_high": null, "available": "2026-06-06", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.465northpark.com/floor-plans-result/"}, {"apt_id": 17, "apt_name": "465 North Park", "address": "465 N Park Dr", "unit": "Residence 1004", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": 765, "rent_low": 3496, "rent_high": null, "available": "Now", "available_now": true, "lease_term": null, "promotion": null, "url": "https://www.465northpark.com/floor-plans-result/"}, {"apt_id": 17, "apt_name": "465 North Park", "address": "465 N Park Dr", "unit": "Residence 1110", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": 806, "rent_low": 3504, "rent_high": null, "available": "2026-05-20", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.465northpark.com/floor-plans-result/"}, {"apt_id": 17, "apt_name": "465 North Park", "address": "465 N Park Dr", "unit": "Residence 3502", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": 715, "rent_low": 3550, "rent_high": null, "available": "2026-07-08", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.465northpark.com/floor-plans-result/"}, {"apt_id": 17, "apt_name": "465 North Park", "address": "465 N Park Dr", "unit": "Residence 3702", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": 715, "rent_low": 3572, "rent_high": null, "available": "2026-07-13", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.465northpark.com/floor-plans-result/"}, {"apt_id": 17, "apt_name": "465 North Park", "address": "465 N Park Dr", "unit": "Residence 3407", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": 724, "rent_low": 3700, "rent_high": null, "available": "2026-06-28", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.465northpark.com/floor-plans-result/"}, {"apt_id": 17, "apt_name": "465 North Park", "address": "465 N Park Dr", "unit": "Residence 3210", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": 806, "rent_low": 3740, "rent_high": null, "available": "2026-06-19", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.465northpark.com/floor-plans-result/"}, {"apt_id": 17, "apt_name": "465 North Park", "address": "465 N Park Dr", "unit": "Residence 0305", "plan": "2BR", "beds": "2BR", "baths": 2, "sqft": 1286, "rent_low": 4855, "rent_high": null, "available": "Now", "available_now": true, "lease_term": null, "promotion": null, "url": "https://www.465northpark.com/floor-plans-result/"}, {"apt_id": 17, "apt_name": "465 North Park", "address": "465 N Park Dr", "unit": "Residence 1108", "plan": "2BR", "beds": "2BR", "baths": 2, "sqft": 1350, "rent_low": 5890, "rent_high": null, "available": "Now", "available_now": true, "lease_term": null, "promotion": null, "url": "https://www.465northpark.com/floor-plans-result/"}, {"apt_id": 17, "apt_name": "465 North Park", "address": "465 N Park Dr", "unit": "Residence 3201", "plan": "2BR", "beds": "2BR", "baths": 2, "sqft": 1339, "rent_low": 5891, "rent_high": null, "available": "2026-07-12", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.465northpark.com/floor-plans-result/"}, {"apt_id": 18, "apt_name": "The Bush Temple", "address": "108 W Chicago Ave", "unit": "#205", "plan": "H-C5", "beds": "1BR", "baths": 1, "sqft": 535, "rent_low": 2462, "rent_high": null, "available": "2026-07-06", "available_now": false, "lease_term": null, "promotion": "~13 units total (floor counts)", "url": "https://livethebushtemple.com/floorplans/"}, {"apt_id": 19, "apt_name": "Two West Delaware", "address": "2 W Delaware Pl", "unit": "#1704", "plan": "04B", "beds": "1BR", "baths": 1.5, "sqft": 945, "rent_low": 5044, "rent_high": null, "available": "2026-06-07", "available_now": false, "lease_term": null, "promotion": "Only 3 units in building", "url": "https://twowestdelaware.com/floorplans/"}, {"apt_id": 20, "apt_name": "Lake Shore Plaza", "address": "445 E Ohio St", "unit": "plan", "plan": "Studio", "beds": "Studio", "baths": 1, "sqft": null, "rent_low": 2115, "rent_high": null, "available": "2026-05-11", "available_now": false, "lease_term": null, "promotion": "~20% units in affordable program", "url": "https://www.lakeshoreplaza.com/floorplans"}, {"apt_id": 20, "apt_name": "Lake Shore Plaza", "address": "445 E Ohio St", "unit": "plan", "plan": "Convertible", "beds": "1BR", "baths": 1, "sqft": null, "rent_low": 2105, "rent_high": null, "available": "2026-06-11", "available_now": false, "lease_term": null, "promotion": "~20% units in affordable program", "url": "https://www.lakeshoreplaza.com/floorplans"}, {"apt_id": 20, "apt_name": "Lake Shore Plaza", "address": "445 E Ohio St", "unit": "plan", "plan": "One Bedroom", "beds": "1BR", "baths": 1, "sqft": null, "rent_low": 2135, "rent_high": null, "available": "2026-05-11", "available_now": false, "lease_term": null, "promotion": "~20% units in affordable program", "url": "https://www.lakeshoreplaza.com/floorplans"}, {"apt_id": 20, "apt_name": "Lake Shore Plaza", "address": "445 E Ohio St", "unit": "plan", "plan": "One Bedroom B", "beds": "1BR", "baths": 1, "sqft": null, "rent_low": 2090, "rent_high": null, "available": "2026-07-09", "available_now": false, "lease_term": null, "promotion": "~20% units in affordable program", "url": "https://www.lakeshoreplaza.com/floorplans"}, {"apt_id": 20, "apt_name": "Lake Shore Plaza", "address": "445 E Ohio St", "unit": "plan", "plan": "Two Bedroom", "beds": "2BR", "baths": 2, "sqft": null, "rent_low": 3425, "rent_high": null, "available": "2026-05-11", "available_now": false, "lease_term": null, "promotion": "~20% units in affordable program", "url": "https://www.lakeshoreplaza.com/floorplans"}, {"apt_id": 21, "apt_name": "West77", "address": "77 W Huron St", "unit": "Unit 0606", "plan": "A4", "beds": "1BR", "baths": 1, "sqft": 766, "rent_low": 2700, "rent_high": null, "available": "2026-06-14", "available_now": false, "lease_term": null, "promotion": "1-unit-per-page (sample only)", "url": "https://www.west77apts.com/floorplans"}, {"apt_id": 22, "apt_name": "North Water Apartments", "address": "340 E North Water St", "unit": "plan", "plan": "sa", "beds": "Studio", "baths": 1, "sqft": 550, "rent_low": 2419, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": "⚠️ 矩形南界外 ~150m", "url": "https://northwaterapartments.prospectportal.com/chicago/north-water-apartments/conventional/floorplans"}, {"apt_id": 22, "apt_name": "North Water Apartments", "address": "340 E North Water St", "unit": "plan", "plan": "cd", "beds": "Studio", "baths": 1, "sqft": 664, "rent_low": 2769, "rent_high": null, "available": null, "available_now": false, "lease_term": "11mo", "promotion": "⚠️ 矩形南界外 ~150m", "url": "https://northwaterapartments.prospectportal.com/chicago/north-water-apartments/conventional/floorplans"}, {"apt_id": 22, "apt_name": "North Water Apartments", "address": "340 E North Water St", "unit": "plan", "plan": "ca2", "beds": "Studio", "baths": 1, "sqft": 628, "rent_low": 2899, "rent_high": null, "available": null, "available_now": false, "lease_term": "11mo", "promotion": "⚠️ 矩形南界外 ~150m", "url": "https://northwaterapartments.prospectportal.com/chicago/north-water-apartments/conventional/floorplans"}, {"apt_id": 22, "apt_name": "North Water Apartments", "address": "340 E North Water St", "unit": "plan", "plan": "cc", "beds": "Studio", "baths": 1, "sqft": 656, "rent_low": 2959, "rent_high": null, "available": null, "available_now": false, "lease_term": "11mo", "promotion": "⚠️ 矩形南界外 ~150m", "url": "https://northwaterapartments.prospectportal.com/chicago/north-water-apartments/conventional/floorplans"}, {"apt_id": 22, "apt_name": "North Water Apartments", "address": "340 E North Water St", "unit": "plan", "plan": "ce", "beds": "Studio", "baths": 1, "sqft": 678, "rent_low": 3159, "rent_high": null, "available": null, "available_now": false, "lease_term": "11mo", "promotion": "⚠️ 矩形南界外 ~150m", "url": "https://northwaterapartments.prospectportal.com/chicago/north-water-apartments/conventional/floorplans"}, {"apt_id": 22, "apt_name": "North Water Apartments", "address": "340 E North Water St", "unit": "plan", "plan": "1f", "beds": "1BR", "baths": 1, "sqft": 770, "rent_low": 3409, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": "⚠️ 矩形南界外 ~150m", "url": "https://northwaterapartments.prospectportal.com/chicago/north-water-apartments/conventional/floorplans"}, {"apt_id": 22, "apt_name": "North Water Apartments", "address": "340 E North Water St", "unit": "plan", "plan": "1j", "beds": "1BR", "baths": 1, "sqft": 806, "rent_low": 3489, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": "⚠️ 矩形南界外 ~150m", "url": "https://northwaterapartments.prospectportal.com/chicago/north-water-apartments/conventional/floorplans"}, {"apt_id": 22, "apt_name": "North Water Apartments", "address": "340 E North Water St", "unit": "plan", "plan": "1n", "beds": "1BR", "baths": 1, "sqft": 836, "rent_low": 3529, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": "⚠️ 矩形南界外 ~150m", "url": "https://northwaterapartments.prospectportal.com/chicago/north-water-apartments/conventional/floorplans"}, {"apt_id": 22, "apt_name": "North Water Apartments", "address": "340 E North Water St", "unit": "plan", "plan": "1h", "beds": "1BR", "baths": 1, "sqft": 787, "rent_low": 3719, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": "⚠️ 矩形南界外 ~150m", "url": "https://northwaterapartments.prospectportal.com/chicago/north-water-apartments/conventional/floorplans"}, {"apt_id": 22, "apt_name": "North Water Apartments", "address": "340 E North Water St", "unit": "plan", "plan": "1l", "beds": "1BR", "baths": 1, "sqft": 813, "rent_low": 3739, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": "⚠️ 矩形南界外 ~150m", "url": "https://northwaterapartments.prospectportal.com/chicago/north-water-apartments/conventional/floorplans"}, {"apt_id": 22, "apt_name": "North Water Apartments", "address": "340 E North Water St", "unit": "plan", "plan": "1g", "beds": "1BR", "baths": 1, "sqft": 773, "rent_low": 3759, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": "⚠️ 矩形南界外 ~150m", "url": "https://northwaterapartments.prospectportal.com/chicago/north-water-apartments/conventional/floorplans"}, {"apt_id": 22, "apt_name": "North Water Apartments", "address": "340 E North Water St", "unit": "plan", "plan": "2c", "beds": "2BR", "baths": 2, "sqft": 1245, "rent_low": 5199, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": "⚠️ 矩形南界外 ~150m", "url": "https://northwaterapartments.prospectportal.com/chicago/north-water-apartments/conventional/floorplans"}, {"apt_id": 22, "apt_name": "North Water Apartments", "address": "340 E North Water St", "unit": "plan", "plan": "2a", "beds": "2BR", "baths": 2, "sqft": 1184, "rent_low": 5349, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": "⚠️ 矩形南界外 ~150m", "url": "https://northwaterapartments.prospectportal.com/chicago/north-water-apartments/conventional/floorplans"}, {"apt_id": 23, "apt_name": "One Bennett Park (Rental)", "address": "514 N Peshtigo Ct", "unit": "featured", "plan": "Reserve 1BR", "beds": "1BR", "baths": 1, "sqft": null, "rent_low": 4200, "rent_high": null, "available": "2026-06-07", "available_now": false, "lease_term": "select", "promotion": "Related Website Offer (new residents)", "url": "https://www.relatedrentals.com/apartment-rentals/chicago/streeterville/one-bennett-park"}, {"apt_id": 23, "apt_name": "One Bennett Park (Rental)", "address": "514 N Peshtigo Ct", "unit": "featured", "plan": "Reserve Corner 1BR", "beds": "1BR", "baths": 1, "sqft": null, "rent_low": 4595, "rent_high": null, "available": "2026-06-28", "available_now": false, "lease_term": "select", "promotion": "Related Website Offer (new residents)", "url": "https://www.relatedrentals.com/apartment-rentals/chicago/streeterville/one-bennett-park"}, {"apt_id": 23, "apt_name": "One Bennett Park (Rental)", "address": "514 N Peshtigo Ct", "unit": "featured", "plan": "Reserve 2BR", "beds": "2BR", "baths": 2, "sqft": null, "rent_low": 5885, "rent_high": null, "available": "2026-07-17", "available_now": false, "lease_term": "select", "promotion": "Related Website Offer (new residents)", "url": "https://www.relatedrentals.com/apartment-rentals/chicago/streeterville/one-bennett-park"}, {"apt_id": 23, "apt_name": "One Bennett Park (Rental)", "address": "514 N Peshtigo Ct", "unit": "featured", "plan": "Reserve 2BR", "beds": "2BR", "baths": 2, "sqft": null, "rent_low": 5995, "rent_high": null, "available": null, "available_now": true, "lease_term": "select", "promotion": "Related Website Offer (new residents)", "url": "https://www.relatedrentals.com/apartment-rentals/chicago/streeterville/one-bennett-park"}, {"apt_id": 24, "apt_name": "State and Grand", "address": "505 N State St", "unit": "2 units", "plan": "A1", "beds": "1BR", "baths": 1, "sqft": 627, "rent_low": 2918, "rent_high": 3023, "available": null, "available_now": false, "lease_term": "13mo", "promotion": "Total = base + 强制费", "url": "https://stateandgrandapts.com/floorplans/"}, {"apt_id": 24, "apt_name": "State and Grand", "address": "505 N State St", "unit": "1 unit", "plan": "A4", "beds": "1BR", "baths": 1, "sqft": 813, "rent_low": 3208, "rent_high": 3253, "available": null, "available_now": false, "lease_term": "12mo", "promotion": "Total = base + 强制费", "url": "https://stateandgrandapts.com/floorplans/"}, {"apt_id": 24, "apt_name": "State and Grand", "address": "505 N State St", "unit": "1 unit", "plan": "B2", "beds": "2BR", "baths": 2.5, "sqft": 1391, "rent_low": 4470, "rent_high": 4515, "available": null, "available_now": false, "lease_term": "12mo", "promotion": "Total = base + 强制费", "url": "https://stateandgrandapts.com/floorplans/"}, {"apt_id": 25, "apt_name": "Grand Plaza", "address": "540 N State St", "unit": "plan", "plan": "U5", "beds": "Studio", "baths": 1, "sqft": 690, "rent_low": 2701, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://grandplazachicago.com/floor-plans/"}, {"apt_id": 25, "apt_name": "Grand Plaza", "address": "540 N State St", "unit": "plan", "plan": "U3", "beds": "1BR", "baths": 1, "sqft": 820, "rent_low": 3077, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://grandplazachicago.com/floor-plans/"}, {"apt_id": 25, "apt_name": "Grand Plaza", "address": "540 N State St", "unit": "plan", "plan": "U4", "beds": "1BR", "baths": 1, "sqft": 870, "rent_low": 3006, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://grandplazachicago.com/floor-plans/"}, {"apt_id": 25, "apt_name": "Grand Plaza", "address": "540 N State St", "unit": "plan", "plan": "U6 Conv", "beds": "1BR Conv", "baths": 1, "sqft": 735, "rent_low": 2751, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://grandplazachicago.com/floor-plans/"}, {"apt_id": 25, "apt_name": "Grand Plaza", "address": "540 N State St", "unit": "plan", "plan": "U8", "beds": "1BR", "baths": 1, "sqft": 820, "rent_low": 2913, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://grandplazachicago.com/floor-plans/"}, {"apt_id": 25, "apt_name": "Grand Plaza", "address": "540 N State St", "unit": "plan", "plan": "U9", "beds": "1BR", "baths": 1, "sqft": 820, "rent_low": 3017, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://grandplazachicago.com/floor-plans/"}, {"apt_id": 25, "apt_name": "Grand Plaza", "address": "540 N State St", "unit": "plan", "plan": "U10", "beds": "1BR", "baths": 1, "sqft": 900, "rent_low": 3089, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://grandplazachicago.com/floor-plans/"}, {"apt_id": 25, "apt_name": "Grand Plaza", "address": "540 N State St", "unit": "plan", "plan": "U1", "beds": "2BR", "baths": 2, "sqft": 1325, "rent_low": 4527, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://grandplazachicago.com/floor-plans/"}, {"apt_id": 25, "apt_name": "Grand Plaza", "address": "540 N State St", "unit": "plan", "plan": "U11", "beds": "2BR", "baths": 2, "sqft": 1320, "rent_low": 4473, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": null, "url": "https://grandplazachicago.com/floor-plans/"}, {"apt_id": 26, "apt_name": "500 Lake Shore Drive", "address": "500 N Lake Shore Dr", "unit": "featured", "plan": "Studio", "beds": "Studio", "baths": 1, "sqft": null, "rent_low": 2700, "rent_high": null, "available": null, "available_now": true, "lease_term": "select", "promotion": "Related Website Offer", "url": "https://www.relatedrentals.com/apartment-rentals/chicago/streeterville/500-lake-shore-drive"}, {"apt_id": 26, "apt_name": "500 Lake Shore Drive", "address": "500 N Lake Shore Dr", "unit": "featured", "plan": "Alcove Studio", "beds": "Studio", "baths": 1, "sqft": null, "rent_low": 2825, "rent_high": null, "available": null, "available_now": true, "lease_term": "select", "promotion": "Related Website Offer", "url": "https://www.relatedrentals.com/apartment-rentals/chicago/streeterville/500-lake-shore-drive"}, {"apt_id": 26, "apt_name": "500 Lake Shore Drive", "address": "500 N Lake Shore Dr", "unit": "featured", "plan": "Alcove Studio", "beds": "Studio", "baths": 1, "sqft": null, "rent_low": 2895, "rent_high": null, "available": "2026-06-07", "available_now": false, "lease_term": "select", "promotion": "Related Website Offer", "url": "https://www.relatedrentals.com/apartment-rentals/chicago/streeterville/500-lake-shore-drive"}, {"apt_id": 26, "apt_name": "500 Lake Shore Drive", "address": "500 N Lake Shore Dr", "unit": "featured", "plan": "Corner 2BR", "beds": "2BR", "baths": 2, "sqft": null, "rent_low": 5095, "rent_high": null, "available": "2026-06-26", "available_now": false, "lease_term": "select", "promotion": "Related Website Offer", "url": "https://www.relatedrentals.com/apartment-rentals/chicago/streeterville/500-lake-shore-drive"}, {"apt_id": 27, "apt_name": "Cityfront Place", "address": "400 N McClurg Ct", "unit": "call", "plan": "S04", "beds": "Studio", "baths": 1, "sqft": 500, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "⚠️ 矩形南界外 ~11m", "url": "https://www.cityfrontchicago.com/floorplans/"}, {"apt_id": 27, "apt_name": "Cityfront Place", "address": "400 N McClurg Ct", "unit": "1 avail", "plan": "S05", "beds": "Studio", "baths": 1, "sqft": 509, "rent_low": 2732, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "⚠️ 矩形南界外 ~11m", "url": "https://www.cityfrontchicago.com/floorplans/"}, {"apt_id": 27, "apt_name": "Cityfront Place", "address": "400 N McClurg Ct", "unit": "call", "plan": "S08", "beds": "Studio", "baths": 1, "sqft": 542, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "⚠️ 矩形南界外 ~11m", "url": "https://www.cityfrontchicago.com/floorplans/"}, {"apt_id": 27, "apt_name": "Cityfront Place", "address": "400 N McClurg Ct", "unit": "call", "plan": "S09", "beds": "Studio", "baths": 1, "sqft": 584, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "⚠️ 矩形南界外 ~11m", "url": "https://www.cityfrontchicago.com/floorplans/"}, {"apt_id": 27, "apt_name": "Cityfront Place", "address": "400 N McClurg Ct", "unit": "2 avail", "plan": "C12", "beds": "1BR", "baths": 1, "sqft": 661, "rent_low": 2591, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "⚠️ 矩形南界外 ~11m", "url": "https://www.cityfrontchicago.com/floorplans/"}, {"apt_id": 27, "apt_name": "Cityfront Place", "address": "400 N McClurg Ct", "unit": "call", "plan": "C16", "beds": "1BR", "baths": 1, "sqft": 664, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "⚠️ 矩形南界外 ~11m", "url": "https://www.cityfrontchicago.com/floorplans/"}, {"apt_id": 27, "apt_name": "Cityfront Place", "address": "400 N McClurg Ct", "unit": "call", "plan": "C13", "beds": "1BR", "baths": 1, "sqft": 665, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "⚠️ 矩形南界外 ~11m", "url": "https://www.cityfrontchicago.com/floorplans/"}, {"apt_id": 27, "apt_name": "Cityfront Place", "address": "400 N McClurg Ct", "unit": "call", "plan": "C01", "beds": "1BR", "baths": 1, "sqft": 717, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "⚠️ 矩形南界外 ~11m", "url": "https://www.cityfrontchicago.com/floorplans/"}, {"apt_id": 27, "apt_name": "Cityfront Place", "address": "400 N McClurg Ct", "unit": "call", "plan": "A10", "beds": "1BR", "baths": 1, "sqft": 850, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "⚠️ 矩形南界外 ~11m", "url": "https://www.cityfrontchicago.com/floorplans/"}, {"apt_id": 27, "apt_name": "Cityfront Place", "address": "400 N McClurg Ct", "unit": "1 avail", "plan": "A15", "beds": "1BR", "baths": 1, "sqft": 854, "rent_low": 2977, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "⚠️ 矩形南界外 ~11m", "url": "https://www.cityfrontchicago.com/floorplans/"}, {"apt_id": 27, "apt_name": "Cityfront Place", "address": "400 N McClurg Ct", "unit": "1 avail", "plan": "A03", "beds": "1BR", "baths": 1, "sqft": 858, "rent_low": 3102, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "⚠️ 矩形南界外 ~11m", "url": "https://www.cityfrontchicago.com/floorplans/"}, {"apt_id": 27, "apt_name": "Cityfront Place", "address": "400 N McClurg Ct", "unit": "call", "plan": "A14", "beds": "1BR", "baths": 1, "sqft": 860, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "⚠️ 矩形南界外 ~11m", "url": "https://www.cityfrontchicago.com/floorplans/"}, {"apt_id": 27, "apt_name": "Cityfront Place", "address": "400 N McClurg Ct", "unit": "call", "plan": "A11", "beds": "1BR", "baths": 1, "sqft": 861, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "⚠️ 矩形南界外 ~11m", "url": "https://www.cityfrontchicago.com/floorplans/"}, {"apt_id": 27, "apt_name": "Cityfront Place", "address": "400 N McClurg Ct", "unit": "call", "plan": "A02", "beds": "1BR", "baths": 1, "sqft": 882, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "⚠️ 矩形南界外 ~11m", "url": "https://www.cityfrontchicago.com/floorplans/"}, {"apt_id": 27, "apt_name": "Cityfront Place", "address": "400 N McClurg Ct", "unit": "call", "plan": "B07", "beds": "2BR", "baths": 2, "sqft": 1127, "rent_low": null, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "⚠️ 矩形南界外 ~11m", "url": "https://www.cityfrontchicago.com/floorplans/"}, {"apt_id": 27, "apt_name": "Cityfront Place", "address": "400 N McClurg Ct", "unit": "2 avail", "plan": "B06", "beds": "2BR", "baths": 2, "sqft": 1168, "rent_low": 4092, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "⚠️ 矩形南界外 ~11m", "url": "https://www.cityfrontchicago.com/floorplans/"}, {"apt_id": 28, "apt_name": "The Ardus", "address": "676 N La Salle Dr", "unit": "#205", "plan": "A1", "beds": "Studio", "baths": 1, "sqft": 678, "rent_low": 2475, "rent_high": null, "available": "2026-05-14", "available_now": false, "lease_term": null, "promotion": "5 units total", "url": "https://livetheardus.com/floorplans/"}, {"apt_id": 29, "apt_name": "Marlowe", "address": "169 W Huron St", "unit": "Apt 408", "plan": "B6", "beds": "2BR", "baths": 2, "sqft": 1125, "rent_low": null, "rent_high": null, "available": null, "available_now": true, "lease_term": null, "promotion": "price via click only", "url": "https://www.livemarlowe.com/floorplans"}, {"apt_id": 29, "apt_name": "Marlowe", "address": "169 W Huron St", "unit": "Apt 413", "plan": "S6", "beds": "Studio", "baths": 1, "sqft": 538, "rent_low": null, "rent_high": null, "available": "2026-05-21", "available_now": false, "lease_term": null, "promotion": "price via click only", "url": "https://www.livemarlowe.com/floorplans"}, {"apt_id": 29, "apt_name": "Marlowe", "address": "169 W Huron St", "unit": "Apt 415", "plan": "A6", "beds": "1BR", "baths": 1, "sqft": 658, "rent_low": null, "rent_high": null, "available": "2026-06-22", "available_now": false, "lease_term": null, "promotion": "price via click only", "url": "https://www.livemarlowe.com/floorplans"}, {"apt_id": 30, "apt_name": "The Gallery on Wells", "address": "637 N Wells St", "unit": "Unit 3210", "plan": "Studio", "beds": "Studio", "baths": 1, "sqft": 509, "rent_low": 2739, "rent_high": null, "available": "Avail Today", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.rentatthegallery.com/sightmap"}, {"apt_id": 30, "apt_name": "The Gallery on Wells", "address": "637 N Wells St", "unit": "Unit 3404", "plan": "Studio", "beds": "Studio", "baths": 1, "sqft": 563, "rent_low": 2934, "rent_high": null, "available": "Avail Today", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.rentatthegallery.com/sightmap"}, {"apt_id": 30, "apt_name": "The Gallery on Wells", "address": "637 N Wells St", "unit": "Unit 2614", "plan": "Studio", "beds": "Studio", "baths": 1, "sqft": 720, "rent_low": 3048, "rent_high": null, "available": "Avail Today", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.rentatthegallery.com/sightmap"}, {"apt_id": 30, "apt_name": "The Gallery on Wells", "address": "637 N Wells St", "unit": "Unit 2911", "plan": "Studio", "beds": "Studio", "baths": 1, "sqft": 717, "rent_low": 3067, "rent_high": null, "available": "Avail Today", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.rentatthegallery.com/sightmap"}, {"apt_id": 30, "apt_name": "The Gallery on Wells", "address": "637 N Wells St", "unit": "Unit 2814", "plan": "Studio", "beds": "Studio", "baths": 1, "sqft": 720, "rent_low": 3068, "rent_high": null, "available": "Avail Today", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.rentatthegallery.com/sightmap"}, {"apt_id": 30, "apt_name": "The Gallery on Wells", "address": "637 N Wells St", "unit": "Unit 1106", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": 764, "rent_low": 3271, "rent_high": null, "available": "Avail Today", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.rentatthegallery.com/sightmap"}, {"apt_id": 30, "apt_name": "The Gallery on Wells", "address": "637 N Wells St", "unit": "Unit 3213", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": 761, "rent_low": 3485, "rent_high": null, "available": "Avail Today", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.rentatthegallery.com/sightmap"}, {"apt_id": 30, "apt_name": "The Gallery on Wells", "address": "637 N Wells St", "unit": "Unit 0304", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": 887, "rent_low": 3735, "rent_high": null, "available": "Avail Today", "available_now": false, "lease_term": "13mo", "promotion": null, "url": "https://www.rentatthegallery.com/sightmap"}, {"apt_id": 30, "apt_name": "The Gallery on Wells", "address": "637 N Wells St", "unit": "Unit 3512", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": 821, "rent_low": 3894, "rent_high": null, "available": "Avail Today", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.rentatthegallery.com/sightmap"}, {"apt_id": 30, "apt_name": "The Gallery on Wells", "address": "637 N Wells St", "unit": "Unit 0315", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": 951, "rent_low": 3918, "rent_high": null, "available": "Avail Today", "available_now": false, "lease_term": "13mo", "promotion": null, "url": "https://www.rentatthegallery.com/sightmap"}, {"apt_id": 30, "apt_name": "The Gallery on Wells", "address": "637 N Wells St", "unit": "Unit 1215", "plan": "2BR", "beds": "2BR", "baths": 2, "sqft": 1225, "rent_low": 5199, "rent_high": null, "available": "Avail Today", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.rentatthegallery.com/sightmap"}, {"apt_id": 30, "apt_name": "The Gallery on Wells", "address": "637 N Wells St", "unit": "Unit 1015", "plan": "2BR", "beds": "2BR", "baths": 2, "sqft": 1291, "rent_low": 5620, "rent_high": null, "available": "Avail Today", "available_now": false, "lease_term": null, "promotion": null, "url": "https://www.rentatthegallery.com/sightmap"}, {"apt_id": 31, "apt_name": "640 North Wells", "address": "640 N Wells St", "unit": "starting", "plan": "Studio", "beds": "Studio", "baths": 1, "sqft": null, "rent_low": 2524, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": "Total = base + 强制费", "url": "https://www.windsorcommunities.com/properties/640-north-wells/"}, {"apt_id": 31, "apt_name": "640 North Wells", "address": "640 N Wells St", "unit": "starting", "plan": "1BR", "beds": "1BR", "baths": 1, "sqft": null, "rent_low": 3154, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": "Total = base + 强制费", "url": "https://www.windsorcommunities.com/properties/640-north-wells/"}, {"apt_id": 31, "apt_name": "640 North Wells", "address": "640 N Wells St", "unit": "starting", "plan": "2BR", "beds": "2BR", "baths": 2, "sqft": null, "rent_low": 4391, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": "Total = base + 强制费", "url": "https://www.windsorcommunities.com/properties/640-north-wells/"}, {"apt_id": 31, "apt_name": "640 North Wells", "address": "640 N Wells St", "unit": "starting", "plan": "3BR", "beds": "3BR", "baths": 3, "sqft": null, "rent_low": 6141, "rent_high": null, "available": null, "available_now": false, "lease_term": "12mo", "promotion": "Total = base + 强制费", "url": "https://www.windsorcommunities.com/properties/640-north-wells/"}, {"apt_id": 32, "apt_name": "Flair Tower", "address": "222 W Erie St", "unit": "Unit 1805", "plan": "A4", "beds": "1BR", "baths": 1, "sqft": 713, "rent_low": 3139, "rent_high": null, "available": "2026-05-21", "available_now": false, "lease_term": null, "promotion": "1-unit-per-page (sample only)", "url": "https://www.flairtower.com/floorplans/"}, {"apt_id": 33, "apt_name": "AMLI River North", "address": "71 W Hubbard St", "unit": "highlight", "plan": "E110", "beds": "Studio", "baths": 1, "sqft": 572, "rent_low": 2795, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "AMLI leasing promo", "url": "https://www.amli.com/apartments/chicago/downtown-chicago-apartments/amli-river-north"}, {"apt_id": 33, "apt_name": "AMLI River North", "address": "71 W Hubbard St", "unit": "highlight", "plan": "A400", "beds": "1BR", "baths": 1, "sqft": 801, "rent_low": 3613, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "AMLI leasing promo", "url": "https://www.amli.com/apartments/chicago/downtown-chicago-apartments/amli-river-north"}, {"apt_id": 33, "apt_name": "AMLI River North", "address": "71 W Hubbard St", "unit": "highlight", "plan": "C550", "beds": "2BR", "baths": 2, "sqft": 1199, "rent_low": 4822, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "AMLI leasing promo", "url": "https://www.amli.com/apartments/chicago/downtown-chicago-apartments/amli-river-north"}, {"apt_id": 33, "apt_name": "AMLI River North", "address": "71 W Hubbard St", "unit": "highlight", "plan": "P-D800", "beds": "3BR/PH", "baths": 2, "sqft": 1752, "rent_low": 7360, "rent_high": null, "available": null, "available_now": false, "lease_term": null, "promotion": "AMLI leasing promo", "url": "https://www.amli.com/apartments/chicago/downtown-chicago-apartments/amli-river-north"}];
+window.__META__ = {"target": {"name": "Feinberg School of Medicine", "address": "303 E Chicago Ave, Chicago, IL 60611", "lat": 41.8961, "lng": -87.6195}, "rectangle": {"north": 41.899339, "south": 41.889096, "west": -87.6361, "east": -87.61349}, "scraped_at": "2026-05-11"};
+</script>
+<script>
+// Streeterville Apartments — client-only filter + map app
+// Data: data/apartments.json, data/units.json, data/meta.json
+
+const state = {
+  apartments: [],
+  units: [],
+  meta: null,
+  filters: {
+    beds: new Set(),
+    rentMax: 9000,
+    walkMax: 20,
+    nowOnly: false,
+    hideSkipped: true,
+    sort: 'rent',
+  },
+  view: 'units',
+  map: null,
+  markers: {}, // apt_id -> Leaflet marker
+  highlightedId: null,
+};
+
+// ---------- Load data ----------
+async function load() {
+  let apts, units, meta;
+  // Prefer embedded data (works on file:// without CORS)
+  if (window.__APARTMENTS__ && window.__UNITS__ && window.__META__) {
+    apts = window.__APARTMENTS__;
+    units = window.__UNITS__;
+    meta = window.__META__;
+  } else {
+    [apts, units, meta] = await Promise.all([
+      fetch('data/apartments.json').then(r => r.json()),
+      fetch('data/units.json').then(r => r.json()),
+      fetch('data/meta.json').then(r => r.json()),
+    ]);
+  }
+  state.apartments = apts;
+  state.units = units;
+  state.meta = meta;
+
+  document.getElementById('meta-stats').textContent =
+    `${apts.length} buildings · ${units.length} units / plans`;
+
+  initFilters();
+  initMap();
+  initListeners();
+  render();
+}
+
+// ---------- Filters ----------
+function bedsOf(unit) {
+  const b = (unit.beds || '').toLowerCase();
+  if (b.includes('studio') || b.includes('convertible') || b === '0br' || b === '0' || b === '0.5') return 'Studio';
+  if (b.includes('1br') || b.includes('jr 1br') || b.includes('1 bed') || b === '1' || b === '1.5') return '1BR';
+  if (b.includes('2br') || b.includes('2 bed') || b === '2') return '2BR';
+  if (b.includes('3br') || b.includes('3 bed') || b === '3' || b.includes('ph')) return '3BR+';
+  return 'Other';
+}
+function rentNumberOf(unit) {
+  if (typeof unit.rent_low === 'number') return unit.rent_low;
+  return null;
+}
+function walkMinOf(walk_time) {
+  if (!walk_time) return null;
+  const m = String(walk_time).match(/(\d+)/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function initFilters() {
+  // Beds chips
+  const beds = ['Studio', '1BR', '2BR', '3BR+'];
+  const wrap = document.getElementById('beds-filter');
+  beds.forEach(b => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.textContent = b;
+    chip.addEventListener('click', () => {
+      if (state.filters.beds.has(b)) state.filters.beds.delete(b);
+      else state.filters.beds.add(b);
+      chip.classList.toggle('active');
+      render();
+    });
+    wrap.appendChild(chip);
+  });
+
+  // Rent max slider
+  document.getElementById('rent-max').addEventListener('input', e => {
+    state.filters.rentMax = +e.target.value;
+    document.getElementById('rent-max-display').textContent = (+e.target.value).toLocaleString();
+    render();
+  });
+  // Walk slider
+  document.getElementById('walk-max').addEventListener('input', e => {
+    state.filters.walkMax = +e.target.value;
+    document.getElementById('walk-max-display').textContent = e.target.value;
+    render();
+  });
+  // Now only
+  document.getElementById('now-only').addEventListener('change', e => {
+    state.filters.nowOnly = e.target.checked;
+    render();
+  });
+  // Hide skipped
+  document.getElementById('hide-skipped').addEventListener('change', e => {
+    state.filters.hideSkipped = e.target.checked;
+    render();
+  });
+  // Sort
+  document.getElementById('sort').addEventListener('change', e => {
+    state.filters.sort = e.target.value;
+    render();
+  });
+  // Reset
+  document.getElementById('reset').addEventListener('click', () => {
+    state.filters = { beds: new Set(), rentMax: 9000, walkMax: 20, nowOnly: false, hideSkipped: true, sort: 'rent' };
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    document.getElementById('rent-max').value = 9000;
+    document.getElementById('walk-max').value = 20;
+    document.getElementById('rent-max-display').textContent = '9,000';
+    document.getElementById('walk-max-display').textContent = '20';
+    document.getElementById('now-only').checked = false;
+    document.getElementById('hide-skipped').checked = true;
+    document.getElementById('sort').value = 'rent';
+    render();
+  });
+  // View toggle
+  document.querySelectorAll('.view-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.view-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      state.view = b.dataset.view;
+      document.getElementById('units-view').classList.toggle('hidden', state.view !== 'units');
+      document.getElementById('buildings-view').classList.toggle('hidden', state.view !== 'buildings');
+      render();
+    });
+  });
+}
+
+// ---------- Map ----------
+function initMap() {
+  const m = state.meta;
+  state.map = L.map('map', { zoomControl: true }).setView([41.8941, -87.6248], 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+    maxZoom: 19,
+  }).addTo(state.map);
+
+  // Draw rectangle bounds
+  const r = m.rectangle;
+  L.rectangle(
+    [[r.south, r.west], [r.north, r.east]],
+    { color: '#2563eb', weight: 2, fillOpacity: 0.05, dashArray: '4 4' }
+  ).addTo(state.map);
+
+  // Target marker (Feinberg)
+  const targetIcon = L.divIcon({
+    className: 'target-marker',
+    html: `<div style="background:#dc2626;color:white;border-radius:4px;padding:3px 8px;font-size:11px;font-weight:600;white-space:nowrap;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.3)">★ Feinberg</div>`,
+    iconSize: [80, 22],
+    iconAnchor: [40, 11],
+  });
+  L.marker([m.target.lat, m.target.lng], { icon: targetIcon, zIndexOffset: 1000 })
+    .addTo(state.map)
+    .bindPopup(`<div class="popup-name">${m.target.name}</div><div class="popup-addr">${m.target.address}</div>`);
+
+  // Building markers
+  state.apartments.forEach(apt => {
+    const color = apt.scraped ? '#2563eb' : '#9ca3af';
+    const icon = L.divIcon({
+      className: 'apt-marker',
+      html: `<div style="background:${color};color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.3);cursor:pointer">${apt.id}</div>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+    });
+    const marker = L.marker([apt.lat, apt.lng], { icon })
+      .addTo(state.map)
+      .bindPopup(buildingPopup(apt));
+    marker.on('click', () => highlightApartment(apt.id));
+    state.markers[apt.id] = marker;
+  });
+}
+
+function buildingPopup(apt) {
+  const units = state.units.filter(u => u.apt_id === apt.id);
+  const ratingStr = apt.rating ? `${apt.rating} ★ (${apt.rating_count})` : '—';
+  return `
+    <div class="popup-name">#${apt.id} ${apt.name}</div>
+    <div class="popup-addr">${apt.address}</div>
+    <div class="popup-stats">
+      ${ratingStr} · ${apt.walk_time} walk
+      ${apt.scraped ? `<br>${units.length} units / plans` : '<br><em>Not scraped</em>'}
+    </div>
+    <a class="popup-link" href="${apt.url}" target="_blank" rel="noopener">Official site →</a>
+    ${apt.url !== apt.url_floorplans ? `<a class="popup-link" href="${apt.url_floorplans}" target="_blank" rel="noopener">Floor plans →</a>` : ''}
+  `;
+}
+
+function highlightApartment(aptId) {
+  state.highlightedId = aptId;
+  // Highlight rows
+  document.querySelectorAll('tbody tr').forEach(tr => {
+    tr.classList.toggle('highlighted', +tr.dataset.aptId === aptId);
+  });
+  // Scroll first matching row into view
+  const first = document.querySelector(`tbody tr[data-apt-id="${aptId}"]`);
+  if (first) first.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+// ---------- Filtering ----------
+function getFilteredUnits() {
+  const aptById = Object.fromEntries(state.apartments.map(a => [a.id, a]));
+  return state.units.filter(u => {
+    const apt = aptById[u.apt_id];
+    if (!apt) return false;
+    if (state.filters.hideSkipped && !apt.scraped) return false;
+    if (state.filters.beds.size > 0 && !state.filters.beds.has(bedsOf(u))) return false;
+    const rent = rentNumberOf(u);
+    if (rent !== null && rent > state.filters.rentMax) return false;
+    const walk = walkMinOf(apt.walk_time);
+    if (walk !== null && walk > state.filters.walkMax) return false;
+    if (state.filters.nowOnly && !u.available_now) return false;
+    return true;
+  });
+}
+function getFilteredBuildings() {
+  const visibleAptIds = new Set(getFilteredUnits().map(u => u.apt_id));
+  return state.apartments.filter(a => {
+    if (state.filters.hideSkipped && !a.scraped) return false;
+    if (state.filters.beds.size > 0 || state.filters.rentMax < 9000 || state.filters.walkMax < 20 || state.filters.nowOnly) {
+      return visibleAptIds.has(a.id);
+    }
+    return true;
+  });
+}
+
+function sortUnits(units) {
+  const aptById = Object.fromEntries(state.apartments.map(a => [a.id, a]));
+  const sortFn = {
+    rent: (a, b) => (rentNumberOf(a) ?? 9e9) - (rentNumberOf(b) ?? 9e9),
+    walk: (a, b) => (walkMinOf(aptById[a.apt_id].walk_time) ?? 99) - (walkMinOf(aptById[b.apt_id].walk_time) ?? 99),
+    sqft: (a, b) => (b.sqft || 0) - (a.sqft || 0),
+    avail: (a, b) => {
+      const ka = a.available_now ? 0 : (Date.parse(a.available) || 9e15);
+      const kb = b.available_now ? 0 : (Date.parse(b.available) || 9e15);
+      return ka - kb;
+    },
+  }[state.filters.sort];
+  return [...units].sort(sortFn);
+}
+
+// ---------- Rendering ----------
+function render() {
+  if (state.view === 'units') renderUnits();
+  else renderBuildings();
+  updateMapMarkers();
+}
+
+function renderUnits() {
+  const units = sortUnits(getFilteredUnits());
+  const aptById = Object.fromEntries(state.apartments.map(a => [a.id, a]));
+  const tbody = document.querySelector('#units-table tbody');
+  tbody.innerHTML = '';
+  units.forEach(u => {
+    const apt = aptById[u.apt_id];
+    const tr = document.createElement('tr');
+    tr.dataset.aptId = u.apt_id;
+    if (u.available_now) tr.classList.add('now');
+    if (u.apt_id === state.highlightedId) tr.classList.add('highlighted');
+    const rentStr = u.rent_low
+      ? (u.rent_high ? `$${u.rent_low.toLocaleString()}–$${u.rent_high.toLocaleString()}` : `$${u.rent_low.toLocaleString()}+`)
+      : '—';
+    const availStr = u.available_now
+      ? '<span class="avail-now">Now</span>'
+      : (u.available ? `<span class="avail-future">${u.available}</span>` : '—');
+    tr.innerHTML = `
+      <td><div class="building-name">${apt.name}</div><div class="muted" style="font-size:11px">${apt.address}</div></td>
+      <td>${u.unit !== 'plan' && u.unit !== 'featured' && u.unit !== 'starting' && u.unit !== 'highlight' ? u.unit + ' · ' : ''}${u.plan}</td>
+      <td>${u.beds}${u.baths ? ` / ${u.baths}ba` : ''}</td>
+      <td>${u.sqft ? u.sqft + ' sf' : '—'}</td>
+      <td class="rent">${rentStr}</td>
+      <td>${availStr}</td>
+      <td>${apt.walk_time}</td>
+      <td><a class="link-btn" href="${u.url}" target="_blank" rel="noopener">View →</a></td>
+    `;
+    tr.addEventListener('click', e => {
+      if (e.target.tagName === 'A') return;
+      highlightApartment(u.apt_id);
+      state.map.flyTo([apt.lat, apt.lng], 16, { duration: 0.5 });
+      state.markers[u.apt_id].openPopup();
+    });
+    tbody.appendChild(tr);
+  });
+  document.getElementById('result-count').textContent = `${units.length} unit${units.length !== 1 ? 's' : ''} matching filters`;
+}
+
+function renderBuildings() {
+  const buildings = getFilteredBuildings();
+  const aptById = Object.fromEntries(state.apartments.map(a => [a.id, a]));
+  const container = document.getElementById('buildings-cards');
+  container.innerHTML = '';
+  const filtered = getFilteredUnits();
+  const unitsByApt = {};
+  filtered.forEach(u => {
+    (unitsByApt[u.apt_id] = unitsByApt[u.apt_id] || []).push(u);
+  });
+
+  buildings.forEach(apt => {
+    const units = unitsByApt[apt.id] || [];
+    const nowCount = units.filter(u => u.available_now).length;
+    const prices = units.map(rentNumberOf).filter(x => typeof x === 'number');
+    const priceRange = prices.length ? `$${Math.min(...prices).toLocaleString()}–$${Math.max(...prices).toLocaleString()}` : '—';
+    const card = document.createElement('div');
+    card.className = 'card' + (apt.scraped ? '' : ' skipped');
+    if (apt.id === state.highlightedId) card.style.borderColor = 'var(--accent)';
+    card.innerHTML = `
+      <div class="card-header">
+        <div>
+          <div class="card-name">#${apt.id} ${apt.name}</div>
+          <div class="card-address">${apt.address}</div>
+        </div>
+        <div class="card-rating">
+          ${apt.rating ? `<span class="star">★</span> ${apt.rating} <span class="muted">(${apt.rating_count})</span>` : '—'}
+        </div>
+      </div>
+      <div class="card-stats">
+        <div><span class="stat-label">Walk:</span> ${apt.walk_time}</div>
+        <div><span class="stat-label">Built:</span> ${apt.year}</div>
+        ${apt.scraped ? `<div><span class="stat-label">Units shown:</span> ${units.length}</div>` : ''}
+        ${apt.scraped ? `<div><span class="stat-label">Price:</span> ${priceRange}</div>` : ''}
+        ${nowCount > 0 ? `<div><span class="avail-now">${nowCount} Now</span></div>` : ''}
+      </div>
+      ${apt.notes ? `<div class="card-notes">${apt.notes}</div>` : ''}
+      <div style="margin-top:6px;display:flex;gap:12px">
+        <a class="link-btn" href="${apt.url}" target="_blank" rel="noopener">Official site →</a>
+        ${apt.url !== apt.url_floorplans ? `<a class="link-btn" href="${apt.url_floorplans}" target="_blank" rel="noopener">Floor plans →</a>` : ''}
+      </div>
+    `;
+    card.addEventListener('click', e => {
+      if (e.target.tagName === 'A') return;
+      highlightApartment(apt.id);
+      state.map.flyTo([apt.lat, apt.lng], 16, { duration: 0.5 });
+      state.markers[apt.id].openPopup();
+    });
+    container.appendChild(card);
+  });
+  document.getElementById('result-count').textContent = `${buildings.length} building${buildings.length !== 1 ? 's' : ''} matching filters`;
+}
+
+function updateMapMarkers() {
+  const visibleAptIds = new Set(getFilteredUnits().map(u => u.apt_id));
+  // For now: leave markers visible; could filter map too if desired.
+  state.apartments.forEach(apt => {
+    const marker = state.markers[apt.id];
+    if (!marker) return;
+    const include = state.filters.hideSkipped ? apt.scraped : true;
+    const matched = state.filters.beds.size > 0 || state.filters.nowOnly
+      ? visibleAptIds.has(apt.id)
+      : include;
+    if (matched && include) marker.addTo(state.map);
+    else state.map.removeLayer(marker);
+  });
+}
+
+function initListeners() {
+  // No-op (handled in initFilters)
+}
+
+load().catch(err => {
+  console.error(err);
+  document.body.innerHTML = '<div style="padding:40px;font-family:sans-serif"><h2>Failed to load data</h2><pre>' + err + '</pre></div>';
+});
+
+</script>
+</body>
+</html>

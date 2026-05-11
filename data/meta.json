@@ -1,0 +1,15 @@
+{
+  "target": {
+    "name": "Feinberg School of Medicine",
+    "address": "303 E Chicago Ave, Chicago, IL 60611",
+    "lat": 41.8961,
+    "lng": -87.6195
+  },
+  "rectangle": {
+    "north": 41.899339,
+    "south": 41.889096,
+    "west": -87.6361,
+    "east": -87.61349
+  },
+  "scraped_at": "2026-05-11"
+}
