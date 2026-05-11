@@ -1,16 +1,19 @@
 # Streeterville Apartments
 
+**Live: https://2025sky.github.io/streeterville-apartments/**
+
 A static webpage to compare apartments near **Feinberg School of Medicine** (303 E Chicago Ave, Chicago, IL 60611). All data scraped directly from each property's official website on **2026-05-11** — no Apartments.com / Zillow / Zumper third-party data (those snapshots are often weeks to months stale).
 
 ## What's in here
 
 - **`index.html` / `style.css` / `app.js`** — A single-page, client-only app with:
   - **Map view** (Leaflet + OpenStreetMap) — every building pinned, Feinberg starred, walking-rectangle outlined
-  - **Unit table** — 130 rows (specific units + plan-level entries), sortable by rent / walk / sqft / availability
+  - **Unit table** — 287 rows (specific units + plan-level entries), sortable by rent / walk / sqft / availability
   - **Filters** — bedrooms, max rent, max walk time, "Available Now" only, hide buildings without scraped data
   - **Building cards view** — alternative layout grouping by property
+  - **Manual check view** — auto-appears only when some buildings can't be scraped, listing click-through links for human review
 - **`data/apartments.json`** — 33 buildings (lat/lng, walk distance, Google rating, official URLs)
-- **`data/units.json`** — 130 units / plans with rent, sqft, beds/baths, availability date
+- **`data/units.json`** — 287 units / plans with rent, sqft, beds/baths, availability date
 - **`data/meta.json`** — target address + rectangle bounds
 
 ## The rectangle
@@ -28,18 +31,18 @@ Roughly 0.7 mi × 1.2 mi — everything inside is ≤ 20 min walk to Feinberg.
 
 - **Condo-only buildings** (no unified rental management): The Grand Ohio (211 E Ohio)
 - **> 20 min walk**: 220 WIL, Hubbard221
-- 11 properties whose floor-plan pages are behind iframe widgets (Yardi prospectportal, Knock, Sightmap, etc.) are listed in the app as "Not scraped" — toggle the filter to show them.
+
+All 33 buildings inside the rectangle were successfully scraped on 2026-05-11, including the widget-portal properties (Yardi RentCafe, Knock, Sightmap, Group Fox, Windsor) that initially blocked extraction.
 
 ## Data formats per building
 
 | Format | Description | Count |
 |---|---|---|
-| `unit-level` | Specific apartment #, floor, current price, availability date | 4 |
-| `plan-level` | Floor plan templates + starting price (and sometimes "X units left") | 13 |
+| `unit-level` | Specific apartment #, floor, current price, availability date | 6 |
+| `plan-level` | Floor plan templates + starting price (sometimes with "X units left") | 18 |
 | `floor-summary` | Per-floor availability count + one featured priced unit | 3 |
-| `featured-only` | 4-6 hand-picked sample units | 2 |
-| `partial` / `starting-only` / `category-only` / `highlight` | One-unit-per-page, starting prices only, or category overview | 6 |
-| `skipped` | Could not extract — see notes per building | 11 |
+| `featured-only` / `1-unit sample` | 1–6 hand-picked sample units | 4 |
+| `starting-only` / `category-only` | Starting prices only, or category overview | 2 |
 
 ## Run locally
 
@@ -49,33 +52,27 @@ python3 -m http.server 8000
 # Then open http://localhost:8000
 ```
 
-## Deploy to GitHub Pages
+## Deploy
 
-1. Create a new GitHub repo (e.g. `streeterville-apartments`)
-2. Push these files:
-   ```bash
-   cd streeterville-apartments
-   git init
-   git add .
-   git commit -m "Initial scrape — 2026-05-11"
-   git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/streeterville-apartments.git
-   git push -u origin main
-   ```
-3. In repo settings → **Pages** → set source to `main` branch, `/` (root)
-4. After ~1 minute, your site is live at `https://YOUR_USERNAME.github.io/streeterville-apartments/`
+Already live at https://2025sky.github.io/streeterville-apartments/ on GitHub Pages (`main` branch, `/` root). After updating any file:
+
+```bash
+git add . && git commit -m "Refresh data" && git push
+```
+
+Pages rebuilds automatically in ~30 seconds.
 
 ## How the data was collected
 
-A semi-manual scrape using a Chrome browser session: navigate to each building's floor-plans page, extract the rendered DOM text, parse with regex / by hand. Sites using iframe-embedded widgets (Yardi RentCafe prospectportal, Knock doorway, Sightmap, etc.) could not be extracted via DOM text — those are listed in the `skipped` set.
+A semi-manual scrape using a Chrome browser session: navigate to each building's floor-plans page, extract the rendered DOM text, parse with regex / by hand. Widget-portal listings (Yardi RentCafe prospectportal, Knock doorway, Sightmap, Group Fox, Windsor) needed a second pass with deeper DOM and network inspection to extract.
 
 For each property the scraper attempted, in order:
 1. `<domain>/floor-plans/` or `<domain>/floorplans/`
 2. `<domain>/availability/` or `<domain>/apartments/`
 3. Navigation link from homepage
-4. Mark as skipped if all of the above fail
+4. Widget iframe content + XHR responses (for portals that proxy through a third party)
 
-To refresh data: you'd need to re-run the same browser session against each building. A future enhancement could automate this with Playwright; the existing widgets (Yardi/Knock/Sightmap) would still need bespoke handling per platform.
+If a future re-scrape fails on any building, it will show up automatically in the app's **Manual check** tab with a click-through link to the official site — no UI changes needed.
 
 ## License
 
